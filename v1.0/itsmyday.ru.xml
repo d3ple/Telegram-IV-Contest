@@ -1,0 +1,32 @@
+?path: /yes/.+
+!exists: //header/h1[has-class("entry-title")] 
+
+body: //article
+title: //header/h1[has-class("entry-title")]
+author:   //span[has-class("author-name")]
+published_date: //time/@datetime
+cover: $body//div[has-class("page-header-image-single grid-container grid-parent")]//img
+
+<figcaption>: $body//p[has-class("wp-caption-text")]
+<figure>: $body//div[has-class("wp-caption alignnone")]
+<slideshow>: $body//*[@id="gallery-1"]
+<span>: $body//p/object
+<iframe>: $body//embed
+
+@replace("http://", "https://"): $body//img/@src
+@replace("http://", "https://"): $body//iframe/@src
+@replace("/v/", "/embed/"): $body//iframe[starts-with(@src,"https://www.youtube.com/v/")]/@src
+@replace("//player.vimeo", "https://player.vimeo"): $body//iframe[starts-with(@src,"//player.vimeo")]/@src
+@replace("//instagram.com", "https://instagram.com"): $body//iframe[starts-with(@src,"//instagram.com")]/@src
+@replace("/embed/", ""): $body//iframe[starts-with(@src,"https://instagram.com")]/@src
+@replace("-150x150", ""): $body//img[starts-with(@src,"http://itsmyday.ru/wp-content/uploads")]/@src
+@replace("-150x150", ""): $body//img[starts-with(@src,"https://itsmyday.ru/wp-content/uploads")]/@src
+
+@remove: $body//div[contains(@data-id,"67464")]
+@remove: $body//div[has-class("social-likes")]
+@remove: $body//br[contains(@style,"clear")]
+@remove: $body//footer
+@remove: $body//div[has-class("entry-meta")]
+
+@unsupported: $body//iframe[starts-with(@src,"//coub.com")]
+@unsupported: $body//div[has-class("slideshow-window jetpack-slideshow slideshow-black")]

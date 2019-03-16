@@ -1,0 +1,33 @@
+?path: /ru/news/.+
+?path: /tj/news/.+
+?path: /en/news/.+
+?path: /news/.+
+
+body:    //div[has-class("article-body js-mediator-article")]
+title: //h1[1]
+subtitle: //h3[has-class("asubtitle")]
+@replace("Автор: ", ""): //span[has-class("article-author")]
+author: $@
+@replace("сегодня", "today"): //div[has-class("article-info")]/span[1]
+@replace("вчера", "yesterday"): //div[has-class("article-info")]/span[1]
+@datetime(): $@
+published_date: $@
+channel: "@asiaplus"
+
+<slideshow>: //div[has-class("fotorama fotorama_content_gallery")]
+@replace_tag(<img>): //slideshow/div
+@set_attr(src, @data-img): //slideshow/img
+
+<cite>: //span[has-class("author-photo")]
+<figure>: //div[has-class("left-span")]/img/..
+@wrap_inner(<figcaption>): //figure[has-class("left-span")]
+@before_el(./..): //figure/figcaption/img
+cover: //figure[1]
+
+@remove: //strong[starts-with(text(), "Оставайтесь с нами в")]/..
+
+@remove: $body//div[has-class("contentref right")]
+@remove: $body//div[has-class("contentref")]
+
+
+@unsupported: //div[has-class("playbuzz")]

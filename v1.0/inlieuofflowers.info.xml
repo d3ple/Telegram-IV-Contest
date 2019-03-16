@@ -1,0 +1,44 @@
+ ###
+?exists: //a[contains(@href,"pdf/1.pdf")]
+?exists: //a[contains(@href,"pdf/3.pdf")]
+?exists: //img[contains(@src,"images/email.gif")]
+
+body:     //div[contains(@id,"col_right")]    
+title:    $body//h3
+subtitle: $body//h4[1]
+author: ""
+
+ ###
+?exists: //img[contains(@alt,"save this page")]
+?exists: //p[contains(@style,"font-style:italic;text-align:center;")]
+
+body:     //div[contains(@id,"col_right")]  
+<b>: //h3/a
+title:    $body//h3
+
+@replace("By ", ""): $body//h4[1]
+@replace("by ", ""): $body//h4[1]
+@replace("By: ", ""): $body//h4[1]
+author: $@
+
+<blockquote>: //div[contains(@style,"background: #d9e7e2; padding: 10px;")] 
+<blockquote>: //div[contains(@style,"border: 1px solid #eeeeee; padding: 10px;")] 
+<u>: //blockquote/a
+
+@wrap(<b>): //div[has-class("imgcenter")]/text()
+<figcaption>: //div[has-class("imgcenter")]/b[2]
+<figure>: //div[has-class("imgcenter")]
+
+@wrap(<b>): //div[has-class("imgright")]/text()
+<figcaption>: //div[has-class("imgright")]/b[2]
+<figure>: //div[has-class("imgright")]
+
+
+@remove: $body//h4[1]
+@remove: $body//img[contains(@src,"images/printer.jpg")]
+@remove: $body//img[contains(@src,"images/save.jpg")]
+@remove: $body//a[starts-with(@href,"print")]
+@remove: $body//a[starts-with(@href,"pdf")]
+@remove: $body/text()
+
+@unsupported: //table

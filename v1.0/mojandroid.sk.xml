@@ -1,0 +1,32 @@
+?exists: //span[has-class("single-date")]
+
+
+body: //div[has-class("single-content single-content-block")]
+cover: //div[has-class("single-thumb")]//img
+title: //h1
+
+<aside>: //div[has-class("katalog katalog_badge app_badge app_badge_M")]
+
+<figcaption>: //p[has-class("wp-caption-text")]
+<figure>: //div[has-class("wp-caption aligncenter")]
+
+<slideshow>: //div[contains(@id, "gallery-4")]
+<slideshow>: //div[contains(@id, "gallery-3")]
+@replace("-150x150", ""): $body//img[starts-with(@src,"https://www.mojandroid.sk/wp-content/uploads")]/@src
+
+
+<aside>: //table[has-class("sat_table_begin")]
+<cite>: //table[has-class("details")]
+
+
+@remove: //div[has-class("ds-social ds-sp-text-center")]
+@remove: //a[has-class("comment-reply-btn")]
+@remove: //p[has-class("single-tag")]
+@remove: //div[has-class("page-links")]
+@remove: //a[has-class("article-tip")]
+@remove: //div[has-class("mymail-form-fields")]
+@remove: //div[has-class("vs-aktualizacie-cta")]
+@remove: //div[has-class("aktualizacie-post-wrapper is-hidden")]
+@remove: //div[has-class("ui-tabs ui-widget ui-widget-content ui-corner-all")]
+@remove: //table[has-class("items")]
+@remove: //div[has-class("header")]

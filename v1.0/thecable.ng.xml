@@ -1,0 +1,26 @@
+?path: /.+
+!exists: //div[has-class("date")]
+
+body: //div[has-class("shortcode-content")]
+title: //div[has-class("content-article-title")]//h2
+@replace("by ", ""): //a[contains(@rel, "author")]/text()
+author: $@
+cover: //div[has-class("article-photo")]/img
+
+<figcaption>: //p[has-class("wp-caption-text")]
+<figure>: //div[has-class("wp-caption aligncenter")]
+<figure>: //div[has-class("wp-caption alignnone")]
+
+@remove: $body/div[1]
+@remove: $body/div[last()]
+
+
+
+?path: /.+
+!exists: //i[has-class("fa fa fa-user")]
+
+body: //div[has-class("post-content post-entry")]
+title: //div[has-class("post-title")]/h1
+@replace("By ", ""): //div[has-class("post-comment")]
+author: $@
+cover: //img[has-class("attachment-broden-post-type-thumb size-broden-post-type-thumb wp-post-image")]
