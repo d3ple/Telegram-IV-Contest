@@ -8,10 +8,13 @@ My repository for [Telegram Instant View templates competition](https://instantv
 
 ## Files
 * `Template Competition 2017` - winning templates of v1.0 competition
+
 * `Template Competition 2019` - templates of v2.x competition
     * `Non-winning templates` - good templates that didn't win for some reasons.
-    * `Winning templates`
+    * `Winning templates` - 🏆🏆🏆
+    
 * `datetimeFixes.js` - userscript for instantview.telegram.org/contest/ pages. The script changes dates and time on the contest pages into your timezone, adds dynamic status and remaining time counter for each template.
+
 * `masterTemplate.xml` - basis for creating a new template.
 
 
