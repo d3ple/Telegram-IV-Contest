@@ -1,10 +1,17 @@
-# Telegram-IV-Contest
-Telegram Instant View templates competition
+# Telegram IV Contest
+My repo for [Telegram Instant View templates competition](https://instantview.telegram.org/contest)
 
+> Instant View allows Telegram users to view articles from around the Web in a consistent way, with zero loading time.
+
+> Templates are sets of instructions that allow Telegram servers to process articles from anywhere on the internet into uniform and lightweight Instant View pages to be displayed to users. 
 
 ## Files
 * **masterTemplate.xml** - basis for creating a new template.
-* **changeDatesToLocal.js** - userscript for instantview.telegram.org/contest/ pages. Replaces the date of publication of templates in accordance with your time zone and adds statuses to templates on the site's contest page.
+* **datetimeFixes.js** - userscript for instantview.telegram.org/contest/ pages. The script changes dates and time on the contest pages into your timezone, adds dynamic status and remaining time counter for each template.
+* **Template Competition 2017** - winning templates of v1.0 competition
+* **Template Competition 2019** - templates of v2.x competition
+    * **Non-winning templates** - good templates that didn't win for some reasons.
+    * **Winning templates**
 
 
 ## Links
