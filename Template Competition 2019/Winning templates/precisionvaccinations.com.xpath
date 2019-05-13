@@ -1,0 +1,162 @@
+~version: "2.1"
+
+
+#### site_name from main page ####
+site_name: "Precision Vaccinations"
+
+
+#### conditions for target pages  ####
+?exists: //div[has-class("view-mode-full")]
+
+
+#### main properties ####
+body: //div[has-class("view-mode-full")][not(has-class("node-vaccine"))][not(has-class("node-page"))]
+body: //div[has-class("view-mode-full")][contains(@about, "/condition")]
+
+kicker: //div[has-class("pv-section")]
+title:  //div[has-class("field-name-title")]
+subtitle: //div[has-class("field-name-field-sub-title")]
+@if( //div[has-class("field-name-title")] ) {
+  subtitle: //h1
+}
+
+author: //div[has-class("field-name-author-wrap")]/a
+
+<figure>: //div[has-class("field-name-field-image")]
+cover: $@
+
+published_date: //div[has-class("field-name-post-date")]
+published_date: //meta[@name="dcterms.date"]/@content
+
+#### author ####
+$factcheck_article: //div[has-class("node-fact-check")]
+
+@if_not( $factcheck_article//div[has-class("field-name-author-wrap")] ) {
+  author: //div[has-class("field-name-reviewer-name-only")]//div[has-class("view-mode-reviewer_name")]//a
+}
+
+#### author page ####
+@if( //body[has-class("page-user")] ) {
+  description: $body//div[has-class("field-name-field-bio")]//p[normalize-space(text())]
+}
+
+
+
+#### fix text formatting ####
+@after(<br>): //blockquote//p
+
+<pic>: //img[@height < 100 or @width < 100]
+
+@replace("\u000D", " "): $body//text() #newline
+@replace("\u00a0", " "): $body//text() #nbsp
+@wrap(<p>): $body/text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+
+## split into paragraphs
+@wrap(<span>): $body//p[./br]/text()
+<paragraph>: $body//p[./br]/span[./next-sibling::br[./next-sibling::br] or ./prev-sibling::br[./prev-sibling::br]]
+<div>: //p[./paragraph]
+<p>: //paragraph
+
+
+
+#### bottom ####
+$medical_review: //div[has-class("group-medical-review-box")][.//ul]
+@before(<hr>): $medical_review
+@remove: $medical_review//div[has-class("view-footer")]
+
+<table>: $medical_review//ul
+@set_attr(border, "0"): $medical_review//table
+<tr>: $medical_review//li
+<td>: $medical_review//tr//div[has-class("field-name-field-thumbnail-image")]
+<td>: $medical_review//tr//div[has-class("field-name-full-name-with-link")]
+@set_attrs(width, "40", height, "40"): $medical_review//table//pic
+
+@map( $medical_review ) {
+  $cur_rew: $@
+  @append_to( $cur_rew ): $cur_rew//table
+  
+  @map( $cur_rew/table ) {
+    $cur_table: $@
+    @append_to( $cur_table ): $cur_table//tr
+    
+    @map( $cur_table/tr ) {
+      $cur_tr: $@
+      @append_to( $cur_tr ): $cur_tr//td
+    }
+  }
+}
+
+@before(<hr>): //div[has-class("field-name-field-citation")]
+
+
+
+#### factcheck ####
+<aside>: //div[has-class("field-name-views-content-ds--review-rating")]
+@before(<hr>): //aside[has-class("field-name-views-content-ds--review-rating")]
+@after(<hr>): //aside[has-class("field-name-views-content-ds--review-rating")]
+
+
+
+#### email
+@set_attr(email, ./text()): //p[contains(text(), "Email:")][./a]/a
+@replace(.+, "mailto:$0"): //p[contains(text(), "Email:")][./a]/a/@email
+@set_attr(href, @email): //p[contains(text(), "Email:")][./a]/a[@email]
+
+
+
+
+#### set high-res and href for images  ####
+@set_attr(src, @data-src): //img[@data-src]
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+## href for .gif images
+@wrap(<figure>): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@after(<a>, href, @href, class, "gif-link"): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@wrap(<figcaption>): $@
+@append(@href): //a[has-class("gif-link")]
+
+
+
+#### related article ####
+<related>: //related
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+
+
+
+#### rudimentary content ####
+@remove: //div[has-class("field-name-sectin-heading")]
+@remove: //div[has-class("group-post-data")]
+@remove: //div[has-class("field-name-author-wrap")]
+@remove: //div[has-class("view-goodrx-fair-price")]
+
+@remove: //section[.//em[text()="Sponsored Links:"]]
+@remove: //div[has-class("field-name-fact-check-related")]
+
+
+
+#### fix nested ####
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+
+#### unsupported content ####
+@unsupported: //div[has-class("quiz")]
+@unsupported: $body//form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]

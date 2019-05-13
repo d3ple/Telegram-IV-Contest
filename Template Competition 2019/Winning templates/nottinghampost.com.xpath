@@ -1,0 +1,341 @@
+~version: "2.1"
+
+
+#### body ####
+site_name: "NottinghamshireLive"
+body: //div[has-class("article-body")]
+title: //h1[@itemprop="headline name"]
+subtitle: //p[@itemprop="description"]
+subtitle: //p[has-class("sub-title")]
+
+published_date: //ul[has-class("time-info")]/li[./time[has-class("date-published")]]/text()
+published_date: //time[has-class("date-published")]/@datetime
+
+cover: //figure[has-class("lead-article-image")] 
+
+@remove: //div[has-class("author")]/span[has-class("job-title")]
+@combine: //div[has-class("author")]/next-sibling::div[has-class("author")]
+@combine(", "): //div[has-class("author")]/span[@rel="author"]
+@combine(", "): //div[has-class("author")]/a[has-class("publication-theme")]
+author: //div[has-class("author")]
+
+
+
+#### affiliate ####
+@html_to_dom: //script[contains(., "articleSubType")]/text()
+@match(TMCONFIG\s=(.+)., 1): $@/text()
+@json_to_xml: $@
+$article_type: $@//articleSubType
+$affiliate_article: $article_type[text()="affiliate"]
+
+@if( $affiliate_article ) {
+  @prepend("This article contains affiliate links, we may receive a commission on any sales we generate from it. "): $body
+  @wrap(<p>, class, "affiliate-text"): $@
+  @append("Learn more"): //p[has-class("affiliate-text")]
+  @wrap(<a>, href, "nottinghampost.com/affiliates/"): $@
+  @wrap(<blockquote>, class, "affiliate-box"): //p[has-class("affiliate-text")]
+}
+
+
+
+#### videos ####
+@if( //meta[@property="videoUrl"]/@content ) {
+  @prepend(<video>): $body
+  $main_video: $@
+  @set_attr(class, "main-video"): $main_video
+  @set_attr(src, //meta[@property="videoUrl"]/@content): $main_video
+  @json_to_xml: //div[has-class("json-placeholder")]/@data-json
+  $video_data: ($@)[1]
+  @set_attr(videoId, ($video_data//videoId)[1]): $main_video
+  @html_to_dom: $video_data//videoHeadline
+  <figcaption>: $@
+  $video_title: $@
+  @wrap(<figure>): $main_video
+  @after_el($main_video): $video_title
+}
+
+@map( $body//div[has-class("mod-video")] ) {
+  $video: $@
+  @json_to_xml: $video//div[has-class("json-placeholder")]/@data-json
+  $video_id: ($@//videoId)[1]
+  @set_attr(id, $video_id): $video
+  $same_as_main: $video[@id=//video[has-class("main-video")]/@videoId]
+  
+  @if( $same_as_main ) {
+   @clone: //figure[./video[has-class("main-video")]]
+   @after_el($same_as_main): $@
+   @remove: $same_as_main
+  }
+}
+
+
+
+#### photo with link to gallery ####
+@append_to($body): //div[has-class("content-column")]/div[has-class("image-gallery-placeholder")]
+@prepend_to($body): $@
+
+@map( //div[has-class("image-gallery-placeholder")] ) {
+  ## set slideshow title with link to gallery-article
+  $gallery: $@
+  @prepend_to($gallery): $gallery//span[has-class("label")]
+  @wrap(<a>, href, $gallery//a[has-class("gallery-interaction")]/@href): $@
+  @wrap(<figcaption>, class, "link"): $@
+  @prepend_to($gallery): $gallery//div[has-class("gallery-title")]
+  @wrap(<figcaption>, class, "title"): $@
+  @combine(" "): $gallery//figcaption[has-class("title")]/next-sibling::figcaption[has-class("link")]
+  
+  ## take photos from gallery-article page 
+  <iframe>:  $gallery//a[has-class("gallery-interaction")]
+  @set_attr(src, @href): $@
+  @inline:  $gallery//iframe[has-class("gallery-interaction")]
+  $loaded_page: $@
+  @after_el($loaded_page): $loaded_page//ol[has-class("image-gallery")]
+  @remove: $loaded_page
+  <slideshow>: $gallery
+}
+
+
+
+#### set high-res and href for images  ####
+@set_attr(src, @data-src): //img[@data-src]
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+## href for .gif images
+@wrap(<figure>): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@after(<a>, href, @href, class, "gif-link"): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@wrap(<figcaption>): $@
+@append(@href): //a[has-class("gif-link")]
+
+
+
+#### images resolution ####
+@set_attr(src, @data-src): //img[@data-src]
+
+
+#### gallery article ####
+@if( //ol[has-class("image-gallery")] ) {
+  body: //article
+  title: //h1[has-class("publication-font")]
+  subtitle: //h1[has-class("publication-font")]/next-sibling::p
+  @remove: //div[has-class("byline")]
+  <div>: //ol[has-class("image-gallery")]
+}
+
+<cite>: //figcaption/span[has-class("credit")]
+@remove: //span[has-class("img-count")]
+@remove: //div[has-class("gallery-tag publication-font")]
+@remove: //div[has-class("tag-list")]
+
+
+
+#### social iframes ####
+<iframe>: //div[has-class("html-embed")]
+@set_attr(src, @data-callback-url): $@
+@inline: //iframe[has-class("html-embed")]
+$inlined_page: $@
+
+<iframe>: //blockquote[@data-instgrm-permalink]
+@set_attr(src, @data-instgrm-permalink): $@
+
+<iframe>: //blockquote[has-class("instagram-content")]
+@set_attr(src, ./div/a/@href): //iframe[has-class("instagram-content")]
+
+<iframe>: //blockquote[@data-mod="instagram"]
+@set_attr(src, ./a/@href): $@
+
+@map( $inlined_page ) {
+  $cur_page: $@
+  @if( $cur_page[.//iframe] ) {
+    @after_el($cur_page): $cur_page//iframe
+    @remove: $cur_page
+  }
+  @if_not( $cur_page[.//iframe] ) {
+    @wrap(<unsupported>): $cur_page
+  }
+}
+
+<iframe>: //div[has-class("html-embed-tweet")]
+@set_attr(src, @data-callback-url): $@
+@inline: //iframe[has-class("html-embed-tweet")]
+
+
+
+#### youtube videos ####
+@prepend_to($body): //div[has-class("article-body")]/prev-sibling::div[has-class("mod-video")][@data-player-type="youtube"]
+
+<iframe>: //div[has-class("mod-video")][@data-player-type="youtube"]
+@set_attr(src, ./div[has-class("youtube-wrapper")]/div[has-class("video-preloader")]/div[has-class("video-thumbnail")]/img/@src): $@
+@replace("img.", ""): $@
+@replace("/0.jpg", ""): $@
+@replace("vi", "embed"): $@
+
+
+
+#### related ####
+@wrap(<related>): //a[has-class("-story")]
+
+<related>: $body//aside[has-class("read-more-links")]
+@remove: //related//span[has-class("publication-theme-icon")]
+@append_to($body): //related
+@combine: //related/next-sibling::related
+<h2>: (//related//h5)[1]
+@remove: //related//h5
+@combine: //related//ul/next-sibling::ul
+@remove: //related//ul//li[position() > 8]
+
+
+
+#### text fixes ####
+@replace("\u00a0\u00a0", "nbsplong1"): $body//text()
+@replace("nbsplong1\u00a0", "nbsplong2"): $body//text()
+@replace("\u00a0", " "): $body//text() #nbsp
+@replace("nbsplong1", "\u00a0\u00a0"): $body//text()
+@replace("nbsplong2", "\u00a0\u00a0\u00a0"): $body//text()
+
+@after(<br>): //blockquote//p
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+<mark>: //span[has-class("publication-theme-icon")]
+
+
+
+#### rudimental ####
+@remove: //form[has-class("skinny-signup")]
+@remove: //div[has-class("mod-unsupported")]
+@remove: //li[not(normalize-space(text()))][not(descendant::*)]
+@remove: $body//div[has-class("embedded-image-grid")]
+
+
+
+#### download_placeholder_with_image ####
+$download_placeholder_with_image: //div[has-class("embed-placeholder")]
+<figcaption>: $download_placeholder_with_image//div[has-class("embed-placeholder-caption")]
+<div>: $download_placeholder_with_image//div[has-class("embed-placeholder-thumbnails")]/a
+<figure>: $download_placeholder_with_image
+
+
+
+#### factbox ####
+@before(<hr>): //div[has-class("factbox")]
+@after(<hr>): //div[has-class("factbox")]
+
+@before(<hr>): //div[has-class("timeline")]
+@after(<hr>): //div[has-class("timeline")]
+
+@before(<hr>): //div[has-class("commercial-factbox")]
+@after(<hr>): //div[has-class("commercial-factbox")]
+@map( //div[@data-mod="lazyFactbox"] ) {
+  $cur_lazy: $@
+  $cur_json: $cur_lazy/@data-component-data
+  @json_to_xml: $cur_json
+  $cur_xml: $@
+  
+  @append_to( $cur_lazy ): $cur_xml//title
+  <h3>: $@
+  
+  @append_to( $cur_lazy ): $cur_xml//relatedPicture
+  <figure>: $@
+  <img>: $@//src
+  @set_attr(src, ./text()): $@
+  
+  @append_to( $cur_lazy ): $cur_xml//body
+  @html_to_dom: $@
+  
+  @append(<p>, class, "ad_source"): $cur_lazy
+  @append_to( $cur_lazy/p[has-class("ad_source")] ): $cur_xml//sponsorshipType
+  @append(" "): $@
+  
+  @append_to( $cur_lazy/p[has-class("ad_source")] ): $cur_xml//sponsorshipName
+  @wrap(<a>, href, $cur_xml//sponsorshipUrl/text()): $@
+
+  @wrap_inner(<b>): $cur_lazy/p[has-class("ad_source")]
+}
+
+
+
+#### closed poll ####
+@json_to_xml: //div[has-class("poll")]/@data-poll-config
+@if_not( $@//closed[text()="1"] or $@//closed[text()="true"] ) {
+  @wrap(<unsupported>): //div[has-class("poll")]
+}
+
+@after(<table>, class, "closed-poll"): //div[has-class("poll")]
+@map( //div[has-class("poll")] ) {
+  $cur_poll: $@
+  $table: $cur_poll/next-sibling::table[has-class("closed-poll")]
+  @json_to_xml: $cur_poll/@data-poll-config
+  $cur_json: $@
+  @append_to($table): $cur_json//question
+  @append_to($table): $cur_json//item
+  @append_to($table): $cur_json//closedMessage
+}
+
+@remove: //div[has-class("poll")]
+
+<caption>: //table[has-class("closed-poll")]//closedMessage
+<th>: //table[has-class("closed-poll")]//question
+@set_attrs(class, "question", colspan, 2, align, "center"): $@
+@remove: //table[has-class("closed-poll")]//item//key
+@remove: //table[has-class("closed-poll")]//item//votes
+
+<td>: //table[has-class("closed-poll")]//item//title
+@set_attr(class, "title"): $@
+<td>: //table[has-class("closed-poll")]//item//percentage
+@set_attr(class, "percentage"): $@
+<tr>: //table[has-class("closed-poll")]//item
+@set_attr(class, "item"): $@
+
+@set_attr(percentage, ./text()): //td[has-class("percentage")]
+@replace(\d+, $0%): //td[has-class("percentage")]/text()
+@append(<br>): //td[has-class("percentage")]
+@append(<pic>, class, "graphic-line", src, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP0PAMAAWQBF/rJODIAAAAASUVORK5CYII="): //td[has-class("percentage")]
+@set_attrs(width, ./../@percentage, height, "15"): //pic[has-class("graphic-line")]
+@remove: //pic[has-class("graphic-line")][@width="0"]
+
+
+
+#### unsupported ####
+@unsupported: //div[has-class("mod-video")][not(@data-player-type="youtube")]
+@unsupported: //div[has-class("live-event-container")]
+@unsupported: //div[has-class("chart")]
+@unsupported: //div[has-class("quiz")]
+
+@unsupported: //div[has-class("du_bb")]
+@unsupported: //div[has-class("du_loading")]
+@unsupported: //div[has-class("opta-embed")]
+@unsupported: //div[@id="du_body_ks"]
+@unsupported: //div[has-class("du_chart_box")]
+@unsupported: //*[contains(text(), "javascript to load")]
+@unsupported: //div[@id="du-js-warning"]
+@unsupported: //div[has-class("opinary-widget-embed")]
+@unsupported: //table[.//a[contains(@href, "https://www.facebook.com/plugins/group/join/popup/?group_id")]]
+@wrap(<unsupported>): $body//script[contains(@src, "chartbeat")]
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//form
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+@unsupported: $body//div[has-class("pb_feed")]
+@unsupported: $body//div[has-class("woobox-offer")]
+@unsupported: $body//div[@id="woobox-root"]
+@unsupported: $body//div[@data-element-type="quiz"]
+
+
+#### fix nested ####
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}

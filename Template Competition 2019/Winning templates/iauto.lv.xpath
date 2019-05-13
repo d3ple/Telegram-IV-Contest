@@ -1,0 +1,111 @@
+~version: "2.1"
+
+site_name: "iAuto"
+?exists: //div[has-class("text")]/prev-sibling::div[has-class("date")]
+
+#### main ####
+body: //div[has-class("text")]
+title:  //h1
+
+<figure>: //div[has-class("introimg")]
+<figcaption>: //figure/p
+cover: //figure[has-class("introimg")]
+
+@datetime(0, "en-US", "hh:mm a, LLL dd, yyyy"): //div[has-class("published")]/text()
+published_date: $@
+
+@clone: //div[has-class("text")]/prev-sibling::div[has-class("date")]
+$date: $@
+@match(\|(.+), 1): $date
+@datetime: $@
+published_date: $@
+
+$author: //div[has-class("text")]/prev-sibling::div[has-class("date")]
+@match((.+)\|, 1): $author
+author: $@
+
+#### image ####
+<figure>: //div[has-class("ph full")]
+<figcaption>: $@/p
+
+
+#### set high-res and href for images  ####
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+
+
+#### related article ####
+# @debug: //*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'related')]
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+
+
+#### fix text formatting ####
+<pic>: //img[@height < 50 or @width < 50]
+
+@replace("\u00a0", " "): $body//text()
+@wrap(<p>): $body/text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+
+
+#### rudimentary content ####
+@remove: //h1/a
+
+
+#### fix nested ####
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+#### unsupported content ####
+@unsupported: //form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+
+
+#### /autoklubi/.+ ####
+?path: /autoklubi/.+
+
+body: //div[has-class("item")]
+title: //h1[has-class("title")]//text()
+cover: $body//img
+
+<ul>: //div[has-class("info-bl")]
+<li>: $@//p[has-class("line")]
+<p>: (//ul[has-class("info-bl")]//li)[1]
+
+<h2>: //span[has-class("label")]
+
+@remove: //div[has-class("clear")]
+
+
+#### /akcijas/.+ ####
+?path: /akcijas/.+
+
+body: //div[has-class("bl-deal-view")]
+title: //h1
+cover: $body//img
+
+@before(<hr>): //div[has-class("dealer")]
+@after(<hr>): //div[has-class("dealer")]
+
+@remove: //div[has-class("socBl")]
+@remove: //div[has-class("clear")]

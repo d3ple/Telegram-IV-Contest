@@ -1,0 +1,329 @@
+~version: "2.1"
+
+
+#### site name ####
+$en_version: //div[has-class("td-main-menu-logo")]/a[contains(@href, "en.ysia")]
+@if( $en_version ) {
+  site_name: "ясиа.ru"
+}
+
+$sakha_version: //a[has-class("td-header-logo")][contains(@href, "sakha.ysia")]
+@if( $sakha_version ) {
+  site_name: "ясиа.ru САХАЛЫЫ"
+}
+
+site_name: "ysia.ru"
+
+
+#### article ####
+?exists: //article//div[has-class("td-post-content")]
+!domain_not: archive\.ysia\.ru
+
+!not_exists: //div[has-class("td-video-template-bg")]
+!not_exists: //link[@href="http://ysia.ru/dar-zhizni/feed/"]
+!not_exists: //div[has-class("td-post-content")]//div[@data-tilda-page-id][not(@data-tilda-page-id="3899711")][not(@data-tilda-page-id="4452812")][not(@data-tilda-page-id="4623134")][not(@data-tilda-page-id="5138849")]
+!not_exists: //article[.//div[has-class("vc_custom_1540200126257")] and .//div[has-class("vc_toggle")]]
+
+body: //div[has-class("td-post-content")]
+title: //h1[has-class("entry-title")]
+subtitle: //p[has-class("td-post-sub-title")]
+published_date: //time[has-class("entry-date")]/@datetime
+author: //div[has-class("td-post-author-name")]/a/text()
+author_url: //div[has-class("td-post-author-name")]/a/@href
+
+
+
+#### unsupported ####
+<div>: //strong[./div[has-class("vc_row wpb_row td-pb-row")]]/..
+$dno: $@
+<div>: $dno/strong[1]
+<strong>: $dno//p[./next-sibling::hr][./strong]
+
+@unsupported: //div[has-class("vc_grid-container-wrapper")]
+@unsupported: //div[has-class("wpb_raw_js")]
+@unsupported: //*[has-class("ricoh-theta-spherical-image")]
+
+@unsupported: $body//form
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+@unsupported: $body//div[has-class("woobox-offer")]
+@unsupported: $body//div[@id="woobox-root"]
+
+<unsupported>: $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+<unsupported>: $body//script[contains(., "apester.") or contains(@src, "apester.")]
+<unsupported>: $body//script[contains(@id, "infogram_")]
+<unsupported>: $body//script[contains(@src, "thinglink")]
+@wrap(<unsupported>): $body//script[contains(@src, "chartbeat")]
+@unsupported: $body//unsupported
+
+
+
+#### fix text formatting ####
+<pic>: //img[@height < 50 or @width < 50]
+@replace("\u00a0", " "): $body//text()
+@after(<br>): //blockquote//p
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+
+@wrap(<span>): $body//p/text()
+<paragraph>: $body//p/span[./next-sibling::br[./next-sibling::br] or ./prev-sibling::br[./prev-sibling::br]]
+<div>: //p[.//paragraph]
+<p>: //paragraph
+
+
+#### text formatting ####
+<aside>: //blockquote[has-class("td_pull_center")]
+<p>: //div[has-class("article__text")]
+
+
+
+
+#### rudimetary ####
+@set_attrs(width, "", height, ""): //iframe[contains(@src, "youtube.com")]
+@remove: //ol[has-class("vc_carousel-indicators")]
+@remove: //div[has-class("td-gallery-slide-top")]
+@remove: //div[has-class("vc_hidden-lg")]
+@remove: //div[has-class("vortex-container-vote")]
+@remove: //img[@data-hook-clogo="coverlogo"]
+@remove: //div[has-class("sharedaddy")]
+@remove: //div[has-class("jp-relatedposts")]
+@remove: //noscript
+@remove: //a[has-class("vc_carousel-control")]
+
+
+
+
+## remove hidden cover
+$hidden_cover: //style[@data-type="vc_custom-css"][contains(text(), ".td-post-featured-image {visibility: hidden;")]
+@if( $hidden_cover ) {
+  @if_not( //article[has-class("tag-nashi-lyudi")] ) {
+    @remove: //div[has-class("td-post-featured-image")]
+  }
+}
+
+@match(td-post-featured-image.+\n.+visibility.hidden): //style[@data-type="vc_custom-css"]
+@replace((td-post-featured-image).+\n.+(visibility.hidden), $1+$2): //style[@data-type="vc_custom-css"]
+$hidden_cover2: //style[@data-type="vc_custom-css"][text()="td-post-featured-image+visibility:hidden"]
+@if( $hidden_cover2 ) {
+  @remove: (//div[has-class("t-cover__carrier")])[1]
+  @if_not( //div[@data-tilda-project-id] ) {
+    @remove: //div[has-class("td-post-featured-image")]
+  }
+}
+
+
+
+#### slideshows ####
+@if_not( //div[has-class("td-post-featured-image")]/figure ) {
+  @wrap_inner(<figure>): //div[has-class("td-post-featured-image")]
+}
+
+<slideshow>: //div[has-class("post_td_gallery")]
+<div>: //article[has-class("tag-naglyadno")]//slideshow
+
+
+$slideshow_article: $body[count(child::p) < 2 or count(child::div) < 4]
+@if( $slideshow_article ) {
+#   <div>: //slideshow
+}
+
+@if( //div[has-class("td-post-featured-image")]/next-sibling::* ) {
+  cover: //div[has-class("td-post-featured-image")]/figure
+}
+cover: //div[@id="td-full-screen-header-image"]//img
+
+@if_not( //article[has-class("tag-75-letie-snyatiya-blokady-leningrada")] ) {
+  <slideshow>: //div[has-class("vc_carousel-inner")]
+  @remove: //div[@data-vc-full-width]
+}
+
+<slideshow>: //div[has-class("t833__animation")]
+<img>: //slideshow[has-class("t833__animation")]//div[has-class("t833__slide")]
+
+
+
+#### related in article ####
+<related>: //figure[has-class("wp-caption alignleft")][not(contains(@id, "attachment"))][.//a]
+<related>: //figure[has-class("wp-caption alignright")][not(contains(@id, "attachment"))][.//a]
+<related>: //blockquote[has-class("td_quote_box")][./p/a/img/../../a]
+<related>: //blockquote[has-class("td_quote_box")][./p[has-class("entry-title")]]
+<related>: //blockquote[has-class("td_quote_box td_box_left")][not(contains(@id, "attachment"))][.//a]
+<related>: //blockquote[has-class("td_quote_box td_box_right")][not(contains(@id, "attachment"))][.//a]
+
+<related>: //p[has-class("entry-title")][./a[not(./next-sibling::*) and not(./prev-sibling::*)]/strong[not(./next-sibling::*) and not(./prev-sibling::*)]]
+<related>: //p[has-class("entry-title")][./strong[not(./next-sibling::*) and not(./prev-sibling::*)]/a[not(./next-sibling::*) and not(./prev-sibling::*)]]
+<related>: //p[has-class("entry-title")][./a[not(./next-sibling::*) and not(./prev-sibling::*)]]
+
+@remove: //related//a[contains(@href, "jpg")]
+@append_to($body): $body//related
+@combine: //related/next-sibling::related
+ 
+
+
+#### special articles ####
+<hr>: //div[has-class("vc_separator")]
+
+@wrap(<table>): //div[has-class("vc_message_box")]
+<th>: //div[has-class("vc_message_box")]
+@after(<br>): //th[has-class("vc_message_box")]//p
+
+@remove: //table[./th[has-class("vc_message_box")][not(.//p)]]
+
+<aside>: //hr[has-class("vc_separator")][//span[has-class("fa-quote-right")]]/next-sibling::div[has-class("wpb_text_column")]//h3
+
+<aside>: //hr[has-class("vc_separator")][//span[has-class("typcn-device-laptop")]]/next-sibling::div[has-class("wpb_text_column")]
+
+<aside>: //div[has-class("vc_custom_1535289023778")]/..
+<aside>: //div[has-class("vc_custom_1535341096788")]/..
+
+<aside>: //hr[has-class("vc_separator")][//span[has-class("fa-flask")]]/next-sibling::div[has-class("wpb_text_column")]
+
+<figure>: //div[has-class("t167__imgblock")]
+<figcaption>: //figure[has-class("t167__imgblock")]/div[has-class("t167__imgdescr")]
+
+<img>: //div[@data-content-cover-bg]
+@set_attr(src, @data-content-cover-bg): $@
+
+<aside>: //div[has-class("t672")]
+<aside>: //div[has-class("t208__wrapper")]
+
+<details>: //div[has-class("vc_toggle")]
+<summary>: $@//div[has-class("vc_toggle_title")]
+@before(<hr>): //div[has-class("vc_custom_1527250977845")]
+
+
+## /dar-zhizni
+<h2>: //div[@field="tn_text_1470209944682"]
+
+@remove: //a[.//img[contains(@data-original, "kisspng-arrow-comput")]]
+@remove: //div[has-class("td-related-row")]
+<blockquote>: //div[@field="tn_text_1552293706411"]
+<blockquote>: //div[@field="tn_text_1552293898986"]
+@remove: //div[@data-elem-id='1552312666963']
+@remove: //div[@data-elem-id='1552312725034']
+@remove: //div[@data-elem-id='1552470565305']
+@remove: //ul[.//a[has-class("t-menu__link-item")][@href="http://ysia.ru/dar-zhizni"]]
+
+$two_blockquote: //div[has-class("r t-rec")]
+@map( $two_blockquote ) {
+  $block: $@
+  @before_el(($block//blockquote)[1]): $block//div[@field="tn_text_1552356128059"]
+  <b>: $@
+  @before_el(($block//blockquote)[2]): $block//div[@field="tn_text_1552355993812"]
+  <b>: $@
+}
+
+<img>: //div[has-class("tn-atom t-bgimg")]
+@set_attr(src, @data-original): $@
+<slideshow>: //div[has-class("t-slds")]
+<figure>: //div[has-class("t-slds__item")]
+<img>: //div[has-class("t-slds__imgwrapper")]
+@set_attr(src, @data-img-zoom-url): $@
+<h2>: //div[has-class("t764__title")]
+<p>: //div[has-class("t764__descr")]
+@before(<hr>): //div[has-class("t022")]
+
+
+## a-teper-diskoteka-2000-e/ ##
+@remove: //h1[has-class("t-title")]
+subtitle: //div[has-class("t-uptitle")]
+<h2>: //div[has-class("t-descr")]
+
+@before(<hr>): //div[has-class("t-rec")][./div[has-class("t254")]]
+@after(<hr>): //div[has-class("t-rec")][./div[has-class("t254")]]
+<blockquote>: //div[has-class("t254")]
+<cite>: //div[has-class("t254__author")]
+@remove: //div[has-class("t254__icon")]
+
+@set_attr(src, @data-original): //div[has-class("t214__blockimg")]
+<img>: //div[has-class("t214__blockimg")]
+
+@before(<hr>): //div[has-class("t208")]
+@after(<hr>): //div[has-class("t208")]
+
+<figure>: //div[has-class("t013__centeredsection")][.//img]
+<figcaption>: //figure[has-class("t013__centeredsection")][.//img]//*[has-class("t013__autor-title")]
+<figcaption>: //figure[has-class("t013__centeredsection")][.//img]//*[has-class("t013__autor-descr")]
+@combine: //figcaption[has-class("t013__autor-title")]/next-sibling::figcaption[has-class("t013__autor-descr")]
+
+
+
+
+
+#### anchors ####
+$anchors: $body[not(.//div[@data-tilda-page-id])]//a[contains(@href, "#")]
+@if( $anchors ) {
+  @before(<anchor>, name, @id): //div[@id]
+}
+
+
+
+
+
+
+
+
+
+
+#### set high-res and href for images  ####
+@set_attr(src, @data-src): //img[@data-src]
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+## href for .gif images
+@wrap(<figure>): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@after(<a>, href, @href, class, "gif-link"): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@wrap(<figcaption>): $@
+@append(@href): //a[has-class("gif-link")]
+
+
+@set_attr(src, @data-original): //*[@data-original]
+@set_attr(srcset, @data-lazy-srcset): //img[@data-lazy-srcset]
+@set_attr(srcset, ""): //img[contains(@srcset, "data:image/gif")]
+
+
+
+
+#### infografika ####
+$infografika: //article[has-class("category-infografika") or has-class("tag-infografika")]
+@if( $infografika ) {
+
+  @set_attr(href-sercset, @srcset): $body//img[@srcset]
+  @replace("(http.+?)(?=\\d+w)(\\d+)w(?:,|$)", "<link src=$1 res=$2>"): $body//img/@href-sercset
+  @append(@href-sercset): $body//img[@href-sercset]
+  @html_to_dom: $@
+  @set_attr(href, .//link[not(../link/@res>@res)]/@src): $body//img[@href-sercset]
+
+  @set_attr(href, ""): //div[has-class("td-post-featured-image")]//img
+}
+
+
+
+#### single video article ####
+?exists: //div[has-class("td-video-template-bg")]
+
+<div>: //p[has-class("td-post-sub-title")]
+body: //div[has-class("td-post-sub-title")]
+title: //h1[has-class("entry-title")]
+published_date: //time[has-class("entry-date")]/@datetime
+author: //div[has-class("td-post-author-name")]/a/text()
+author_url: //div[has-class("td-post-author-name")]/a/@href
+
+@append_to($body): //div[has-class("td-post-featured-video")]
+@set_attrs(width, "", height, ""): //iframe[contains(@src, "youtube.com")]
+
+@remove: //div[has-class("td-post-sharing")]
+
+
+?true
+#### fix nested ####
+<div>: //figure[.//table]
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}

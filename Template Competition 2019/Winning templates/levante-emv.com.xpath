@@ -1,0 +1,98 @@
+~version: "2.0"
+
+site_name: //meta[@name="organization"]/@content
+<div>: //strong/img/..
+<div>: //p/img/..
+<div>: //h2/img/..
+<div>: //p/iframe/..
+<div>: //p/video/..
+
+
+####
+?path: /multimedia/videos/.+
+?path: /multimedia/fotos/.+
+
+body: //div[has-class("col-sm-8 col-md-8")]
+title: //h1[@itemprop="name"]
+published_date: //span[has-class("item_date")]/@content
+author: ////div[has-class("descripcion_principal")]//span[@itemprop="author"]/text()
+
+$slideshow: //div[@id="div_galeriaFotos"]
+@if( $slideshow ) {
+  @prepend_to($body): //div[has-class("item_info")][@itemprop="description"]
+}
+@set_attr(src, @data-src): //img
+@remove: $slideshow//div[@id="div-carrusel"]
+@remove: $slideshow//a[has-class("carousel-control")]
+<figure>: $slideshow//div[has-class("item")]
+<figcaption>: $slideshow//div[@id="itemFirma"]
+<cite>: $slideshow//figcaption/span[@itemprop="author"]
+
+
+@remove: //source[@label="HD"]
+@remove: //span[@itemprop="author"]
+@remove: //span[has-class("item_date")]
+@remove: //div[has-class("labels")]
+@remove: //div[has-class("descripcion_principal")]/text()
+
+@debug: "1"
+
+####
+?exists: //span[@itemprop="articleBody"]
+!not_exists: //div[has-class("premium-pr690")]
+
+body: //span[@itemprop="articleBody"]
+title: //h1[@itemprop="headline"]
+subtitle: //h2[@itemprop="description"]
+@combine(","): //span[@itemprop="author"]/next-sibling::span[@itemprop="author"]
+author: //span[@itemprop="author"]
+
+@replace(\|, ","): //span[@itemprop="dateCreated"]
+published_date: //span[@itemprop="dateCreated"]
+
+@set_attr("src", ./../../div[has-class("carruselColorBox")][1]/a[has-class("fotosNoticiaCarrusel")]/@href): //div[has-class("cuadro_multimedia")]/div[has-class("foto_desa")]/img
+<figcaption>: //div[has-class("bloqueclear_video")]
+<cite>: //span[has-class("firma_foto")]
+<figure>: //div[has-class("foto_desa")]
+
+
+@if( //figure[has-class("foto_desa")]//video ) {
+  @prepend_to($body): //figure[has-class("foto_desa")]
+}
+
+@if_not( //figure[has-class("foto_desa")]//video ) {
+  cover: //figure[has-class("foto_desa")]
+}
+
+<related>: //div[has-class("not_relacionadas")]
+@append_to($body): $@
+
+<figure>: //div[@itemprop="image"]
+<figcaption>: //span[has-class("pie_foto")]
+
+@set_attr(href, ./../../@href): //a/figure[@itemprop="image"]/img
+<div>: //a/figure[@itemprop="image"]/..
+
+@prepend_to($body): //div[has-class("cuadro_multimedia")]//ul/li[has-class("fotos")]/..
+
+@debug: "2"
+
+####
+?exists: //div[@itemprop="articleBody"]
+
+body: //div[@itemprop="articleBody"]
+title: //h1[@itemprop="headline"]
+subtitle: //h5[@itemprop="alternativeHeadline"]
+published_date: //meta[@itemprop="datePublished"]/@content
+author: //span[@itemprop="author"]/text()
+
+<figcaption>: //div[has-class("noti")]
+<figure>: //div[has-class("box_media foto")]
+cover: $@
+
+@remove: //span[@itemprop="author"]
+@remove: //div[has-class("redes_pie")]
+@remove: //div[has-class("contenedor_tags")]
+@remove: //div[@id="ultimedia_wrapper"]
+
+@debug: "3"

@@ -1,0 +1,50 @@
+~version: "2.0"
+
+<div>: //p/img/..
+<div>: //p/iframe/..
+<div>: //p/video/..
+<div>: //p/audio/..
+
+####
+?exists: //meta[@property="og:title"][@content="Soutenir MacGeneration"]
+
+body: //div[has-class("field-item")]
+title: //h1
+
+####
+?exists: //section[@id="comment"]
+
+body: //div[has-class("node-content")]
+title: //h1[has-class("node-title")]
+author: //span[has-class("node-author")]/span[has-class("username")]
+
+@replace("à", ","): //time[has-class("node-time")]/text()
+@replace("/", "-"): //time[has-class("node-time")]/text()
+@datetime: //time[has-class("node-time")]/text()
+published_date: $@
+
+<related>: //div[has-class("field-name-field-pour-aller-plus-loin")]
+<h4>: //related/div[has-class("field-label")]
+
+@append_to($body): //div[@id="section_note"]
+
+@wrap(<reference>): //a[has-class("footnote")]
+@set_attr(name, ./a/@id): //reference/a[has-class("footnote")]/..
+@prepend(<anchor>, name, @id): //li[@id]
+
+@after(<br>): //fieldset/legend
+<b>: //fieldset/legend
+@wrap(<p>): $@
+<pic>: //fieldset//img
+<blockquote>: //fieldset
+
+@unsupported: //blockquote[has-class("reddit-card")]
+
+@remove: //div[has-class("bannerClub2")]
+
+
+@wrap(<h3>): //div[has-class("test-note")]
+@prepend("Le résultat: "): //div[has-class("test-note")]
+@before("/ "): //div[has-class("test-note")]//div[has-class("n2")]
+<span>: //div[has-class("test-note")]//div
+

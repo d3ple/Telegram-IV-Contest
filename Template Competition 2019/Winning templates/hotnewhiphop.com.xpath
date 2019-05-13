@@ -1,0 +1,163 @@
+~version: "2.1"
+
+site_name: "hnhh"
+?exists: //div[has-class("editorBlock-date")]
+
+#### main ####
+body: //article
+title:  //h1[@itemprop="headline"]
+subtitle: //h2[@itemprop="description"]
+author: //a[has-class("editorBlock-authorBlock-title")]
+published_date: //div[has-class("editorBlock-date")]
+
+
+
+#### images ###
+<figcaption>: //div[has-class("peeper-bigSize-caption")]
+<figure>: //div[has-class("swiper-slide")]
+cover: $@
+
+<figure>: //div[has-class("simplePix-slide")]
+<figcaption>: //div[has-class("simplePix-caption")]
+
+<figure>: //div[has-class("peeper-gallery-bigSize2")]
+<figcaption>: //div[has-class("peeper-bigSize-caption-text")]
+
+
+
+#### fix text formatting ####
+<pic>: //img[@height < 50 or @width < 50]
+@replace("\u000D", " "): $body//text()
+@replace("\u00a0", " "): $body//text()
+@wrap(<p>): $body/text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+@wrap_inner(<u>): //*[@style="text-decoration: underline;"]
+
+<hr>: //p[@style="text-align: center;"][./strong[text()="----"] and count(child::*) = 1]
+
+
+
+#### youtube video ####
+@replace("hnhh.co/youtube-embed", "youtube.com/embed"): //iframe/@src
+@after_el( //div[has-class("youtube-container")] ): .//div[has-class("youtube-window")]
+@remove: //div[has-class("youtube-container")]
+
+
+
+#### music container ####
+@map( //div[has-class("mixtape-container")] ) {
+  $cur: $@
+  @after_el( $cur ): $cur//iframe
+  @remove: $cur
+}
+
+
+
+#### rating ####
+@after(<hr>): //div[has-class("interactiveReview-desktop-wrap")]
+@wrap_inner(<b>): //span[has-class("editor-label")]
+@wrap_inner(<b>): //span[has-class("interactiveReview-user-title")]
+@after(" "): //div[has-class("interactiveReview-editor")]/span[has-class("editor-label")]
+@after(" "): //span[has-class("interactiveReview-user-title")]
+<span>: //div[has-class("interactiveReview-wrap")]
+@before(" -"): //div[has-class("interactiveReview-userTooltip-percentage")]
+<span>: //div[has-class("interactiveReview-userTooltip-percentage")]
+
+
+## user rating
+<ul>: //div[has-class("audience-rating")]
+$user_rating: //ul[has-class("audience-rating")]
+@prepend_to($user_rating): $user_rating//span[has-class("audience-rating-header")]
+@append(":"): $user_rating//span[has-class("audience-rating-header")]
+@append_to($user_rating): $user_rating//span[has-class("percent")]
+<span>: //div[has-class("indicator")]
+
+<li>: //ul[has-class("audience-rating")]//span[has-class("percent")]
+<li>: //ul[has-class("audience-rating")]//div[has-class("audience-rating-right-block")]
+
+## editor rating
+<ul>: //div[has-class("editor-rating")]
+$editor_rating: //ul[has-class("editor-rating")]
+@prepend_to($editor_rating): $editor_rating//span[has-class("review-description-title")]
+@replace(.+, "$0 :"): $editor_rating//span[has-class("review-description-title")]
+@append_to($editor_rating): $editor_rating//span[has-class("percent")]
+<span>: //div[has-class("review-description-verdict")]
+
+<li>: $editor_rating//span[has-class("percent")]
+<li>: $editor_rating//div[has-class("editor-rating-left-block")]
+<ul>: $editor_rating//div[has-class("review-description")]
+<li>: $editor_rating//div[has-class("review-description-goldenCount")]
+<li>: $editor_rating//div[has-class("review-description-brokenCount")]
+
+## both rating
+@append("🔥 - "): //ul//span[has-class("fire")]
+@append("📀 - "): //ul//span[has-class("no-fire")]
+@append("💿 - "): //ul//span[has-class("broken-rec")]
+
+@replace(.+, "$0 %"): //ul//li[has-class("percent")]
+@remove: //ul//div[has-class("review-progressbar-container")]
+@remove: //ul//div[has-class("percent-block")]
+
+<table>: //div[has-class("review-container")]
+@wrap(<td>): $@//ul
+@set_attr(valign, "top"): $@
+
+
+
+#### set high-res and href for images  ####
+gigigigigf
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+
+
+#### related article ####
+# @debug: //*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'related')]
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+
+
+
+
+
+#### rudimentary content ####
+@remove: //img[@alt="camera-icon"]
+@remove: //div[has-class("meta-social-container")]
+@remove: //div[has-class("tagBlock")]
+@remove: //div[has-class("commentBlock")]
+@remove: //img[has-class("simplePix-slide-naturalDimensions")]
+@remove: //div[has-class("interactiveReview-imperative")]
+@remove: //div[has-class("youtube-subscribe-wrapper")]
+@remove: //div[has-class("competition-wrapper")]
+@remove: //div[has-class("review-audience-rating")]
+
+
+
+#### fix nested ####
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+#### unsupported content ####
+@unsupported: //div[has-class("jw-player-container")]
+@unsupported: //div[has-class("tidal-embed")]
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//form
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]

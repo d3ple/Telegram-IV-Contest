@@ -1,0 +1,190 @@
+~version: "2.0"
+site_name: "10News"
+
+
+#### unsupported ####
+?exists: //div[has-class("published")]
+?exists: //main[has-class("brandSpotlight")]
+?exists: //section[has-class("galleryContent")]
+@unsupported: //div[has-class("scrippsVideoEmbed")]
+@wrap(<unsupported>): //script[contains(@src, 'embed') and not(contains(@src, 'instagram'))]
+
+
+
+#### body ####
+body: //article[has-class("scrippsArticle")]
+title: //h1[has-class("ArticlePage-headline")]
+subtitle: //div[has-class("ArticlePage-subHeadline")]
+
+@remove: //div[has-class("ArticlePage-authorName")]/span[has-class("accent")]
+@wrap(<span>, class, "author"): //div[has-class("ArticlePage-authorName")]/text()
+<span>: //div[has-class("ArticlePage-authorName")]/a
+@set_attr(class, "author"): $@
+@combine(" "): //span[has-class("author")]/next-sibling::span[has-class("author")]
+author: //div[has-class("ArticlePage-authorName")]/span[has-class("author")]
+
+@datetime(0, "en-US", "hh:mm a, LLL dd, yyyy"): //div[has-class("published")]/text()
+published_date: $@
+
+
+
+#### fix text formatting ####
+@after(<br>): //blockquote//p
+
+<pic>: //img[@height < 100 or @width < 100]
+
+@replace("\u000D", " "): $body//text() #newline
+@replace("\u00a0", " "): $body//text() #nbsp
+@wrap(<p>): $body/text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+
+## split into paragraphs
+@wrap(<span>): $body//p[./br]/text()
+<paragraph>: $body//p[./br]/span[./next-sibling::br[./next-sibling::br] or ./prev-sibling::br[./prev-sibling::br]]
+<div>: //p[./paragraph]
+<p>: //paragraph
+
+
+
+#### set high-res and href for images  ####
+@set_attr(src, @data-src): //img[@data-src]
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+## href for .gif images
+@wrap(<figure>): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@after(<a>, href, @href, class, "gif-link"): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@wrap(<figcaption>): $@
+@append(@href): //a[has-class("gif-link")]
+
+
+
+#### images ####
+<figure>: //div[has-class("WheelItem-wheelItems")]
+@after(<figcaption>, class, "slide_caption"): //figure[has-class("WheelItem-wheelItems")]/img
+@set_attrs(data-caption, ./../img/@data-caption, data-credit, ./../img/@data-credit, data-copyright, ./../img/@data-copyright): //figcaption[has-class("slide_caption")]
+
+
+
+#### videos ####
+<video>: //div[has-class("WheelItemVideo")]
+@set_attr(src, @data-mp4): $@
+@remove: //video[has-class("WheelItemVideo")]//div[has-class("WheelItemVideo-media")]
+@after(<figcaption>, class, "slide_caption"): //figure[has-class("WheelItem-wheelItems")]/video
+@set_attrs(data-caption, ./../video/@data-caption, data-credit, ./../video/@data-credit): //figcaption[has-class("slide_caption")]
+
+@prepend(@data-caption): //figcaption[has-class("slide_caption")]
+@append(@data-credit): //figcaption[has-class("slide_caption")]
+@wrap(<cite>): $@
+@prepend(@data-copyright): //figcaption[has-class("slide_caption")]
+@wrap(<cite>): $@
+@combine(<br>): //cite/next-sibling::cite
+@html_to_dom: //figure//figcaption//text()
+
+<video>: //div[has-class("ScrippsHTML5VideoPlayer")][@data-mp4]
+@set_attr(src, @data-mp4): $@
+<video>: //div[has-class("ScrippsHTML5VideoPlayer")][@data-m3u8]
+@set_attr(src, @data-m3u8): $@
+
+@wrap(<figure>): //video[has-class("ScrippsHTML5VideoPlayer")]
+@prepend(@data-caption): //video[has-class("ScrippsHTML5VideoPlayer")]
+@wrap(<figcaption>): $@
+
+
+
+#### main slideshow ####
+<slideshow>: //div[has-class("Wheel")]
+
+
+
+#### cover ####
+$cover_image: //slideshow[has-class("Wheel")][not(count(descendant::figure) > 1)]
+
+@if( $cover_image ) {
+  cover: $cover_image//figure[not(.//video)]
+}
+
+
+
+#### related ####
+@wrap(<related>): //p[.//descendant-or-self::*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'related:')][./span[has-class("Enhancement")]//a or ./next-sibling::span[has-class("Enhancement")]//a]]
+<h2>: $@//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'related:')][./span[has-class("Enhancement")]//a]
+
+@wrap(<related>): //p[.//descendant-or-self::*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'list:')][./span[has-class("Enhancement")]//a]]
+<h2>: $@//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'list:')][./span[has-class("Enhancement")]//a]
+
+<related>: //p[./b[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'related:')]][./next-sibling::ul]
+<h2>: $@/b
+
+@map( //related[./next-sibling::ul] ) {
+  @append_to($@): $@/next-sibling::ul
+}
+
+
+
+#### /sdconnect ####
+title: //h1[has-class("brandSpotlight Page-headline")]
+
+@replace("By", ""): //div[has-class("brandSpotlight Page-authorName")]/p
+author: $@
+
+
+
+#### slideshow articles ####
+body: //section[has-class("galleryContent")]
+title: //h1[has-class("Page-headline")]
+
+<figure>: //li[has-class("Page-slides-slide")]
+<figcaption>: //figure//span[has-class("info")]
+<cite>: //figure//span[has-class("att")]
+<cite>: //figure//span[has-class("copy")]
+@combine(<br>): //cite[has-class("att")]/next-sibling::cite[has-class("copy")]
+
+@append_to(./../figcaption): //figcaption/next-sibling::cite
+
+@remove: //article[has-class("modal-gallery")]
+
+@match(jsPublishDate\s=\s'(.*)';, 1): //script[contains(text(), "jsPublishDate")]
+published_date: $@/text()
+
+
+
+#### rudimental ####
+@replace("\u00a0", " "): $body//text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+
+@remove: //div[has-class("article-top-contain")]
+@remove: //div[has-class("right-column")]
+@remove: //div[has-class("copyright")]
+@remove: //div[has-class("carousel--main-content")]
+@remove: //div[has-class("brandSpotlight Page-authorName")]
+@remove: //div[has-class("article-right-column")]
+@remove: //div[has-class("brandSpotlight Page-datePublished")]
+@remove: //div[has-class("Gallery Page-actions-body")]
+@remove: //*[has-class("Gallery Page-actions-heading")]
+
+
+
+#### unsupported content ####
+@unsupported: //div[has-class("quiz")]
+@unsupported: $body//form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+
+
+
+#### fix nested ####
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}

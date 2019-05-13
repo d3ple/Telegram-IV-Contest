@@ -1,0 +1,148 @@
+~version: "2.1"
+
+
+#### site_name from main page ####
+site_name: "nbc - Namibian Broadcasting Corporation"
+
+
+#### conditions for target pages  ####
+?exists: //div[has-class("field-name-post-date")]
+?exists: //div[has-class("view-radio-sations")]
+?exists: //nav[@id="breadcrumbs"]//li/a[@href="/radio"]
+
+
+#### main properties ####
+body: //div[has-class("node")]
+title:  //div[has-class("title")]
+
+@datetime(0, "en-US", "EEEE, dd. MMMM yyyy - HH:mm"): //div[has-class("field-name-post-date")]//div[has-class("field-item")]
+published_date: $@
+
+
+
+#### fix text formatting ####
+@after(<br>): //blockquote//p
+
+<pic>: //img[@height < 100 or @width < 100]
+
+@replace("\u000D", " "): $body//text() #newline
+@replace("\u00a0", " "): $body//text() #nbsp
+@wrap(<p>): $body/text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+
+## split into paragraphs
+@wrap(<span>): $body//p[./br]/text()
+<paragraph>: $body//p[./br]/span[./next-sibling::br[./next-sibling::br] or ./prev-sibling::br[./prev-sibling::br]]
+<div>: //p[./paragraph]
+<p>: //paragraph
+
+
+
+#### set high-res and href for images  ####
+@set_attr(src, @data-src): //img[@data-src]
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+## href for .gif images
+@wrap(<figure>): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@after(<a>, href, @href, class, "gif-link"): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@wrap(<figcaption>): $@
+@append(@href): //a[has-class("gif-link")]
+
+
+
+#### related article ####
+<related>: //related
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+
+
+
+#### rudimentary content ####
+@remove: //div[has-class("field-name-field-categories")]
+@remove: //div[has-class("field-name-post-date")]
+<pic>: //img[has-class("file-icon")]
+
+
+
+#### cover image ####
+<figure>: //div[has-class("field-name-field-image")]
+<cite>: //div[has-class("field-name-field-credits")]
+@wrap(<figcaption>): $@
+<span>: //figcaption//div
+
+@map( //figure[has-class("field-name-field-image")][./next-sibling::figcaption] ) {
+  @append_to($@): $@/next-sibling::figcaption
+  
+}
+
+
+
+#### slideshow ####
+<slideshow>: //div[has-class("field-name-field-gallery")]
+<figure>: //li[has-class("gallery-slide")]
+
+@after(@title): //figure//img[not(@title="")][@title]
+@wrap(<figcaption>): $@
+
+@map( //figure[has-class("gallery-slide")] ) {
+  $cur_img: $@
+  @set_attr(src, $cur_img/a[./span[has-class("view-full")]]/@href): $cur_img/img
+}
+
+
+
+#### radio ####
+body: //div[has-class("view-radio-sations")]
+
+@before(<hr>): //div[has-class("view-radio-sations")]//div[has-class("views-row")]
+
+
+$radio_page: //div[has-class("page-content")][.//nav[@id="breadcrumbs"]//li/a[@href="/radio"]]//div[has-class("node")]
+
+<table>: //div[@id="app"]
+@wrap(<td>): //table[@id="app"]/a
+<pic>: //table[@id="app"]//img
+@set_attr(border, "0"): //table[@id="app"]
+
+$table_header: //center[contains(., "Get the App bellow to stream")]
+@prepend_to( //table[@id="app"] ): $table_header
+<td>: $@
+@wrap(<tr>): $@
+@set_attr(colspan, "2"): $@/td
+
+$radio_descr: //meta[@property="og:description"][contains(@content, "Get the App bellow to stream")]
+@if( $radio_descr ) {
+  description: ($body//p[normalize-space(text())][not(.//img)])[1]
+}
+
+@wrap(<unsupported>): $radio_page//audio
+
+
+#### fix nested ####
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+
+#### unsupported content ####
+@unsupported: $body//div[has-class("quiz")]
+@unsupported: $body//form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+@wrap(<unsupported>): $body//script[contains(@src, "chartbeat")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+@unsupported: $body//div[has-class("woobox-offer")]
+@unsupported: $body//div[@id="woobox-root"]

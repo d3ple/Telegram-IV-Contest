@@ -1,0 +1,71 @@
+~version: "2.1"
+
+?exists: //div[has-class("entry-blog-meta")]
+
+#### main ####
+site_name: "TOLO news"
+body: //div[has-class("post-single")]
+title:  //h2[has-class("title-top-post-tolonews")]
+subtitle: //div[has-class("intro")]
+
+@replace("By", ""): //span[has-class("post-date")]//text()
+author: //span[has-class("post-date")]/span[has-class("darkgrey-color")]
+author: //span[has-class("post-date")]/text()
+
+@json_to_xml: ((//span[has-class("post-date")])[1]//span[has-class("uppercase-txt")])[1]/span[has-class("article-formatter")]/@data-time
+published_date: $@/timestamp
+
+
+
+#### set high-res and href for images  ####
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+
+
+#### related article ####
+<related>: //div[has-class("related-news")]
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+
+
+#### fix text formatting ####
+<pic>: //img[@height < 50 or @width < 50]
+
+@replace("\u00a0", " "): $body//text()
+@wrap(<p>): $body/text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+
+
+#### rudimentary content ####
+@remove: //div[has-class("entry-blog-meta")]
+@remove: //div[has-class("tag-category")]
+@remove: //div[has-class("img-video-widget")]//img
+
+
+#### fix nested ####
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+#### unsupported content ####
+@unsupported: //form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]

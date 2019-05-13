@@ -1,0 +1,209 @@
+~version: "2.1"
+
+
+#### site meta ####
+$main: //meta[@property="og:site_name"][@content="中國報 China Press"]
+@if( $main ) {
+  site_name: "中國報 China Press"
+}
+
+$eastcoast: //meta[@property="og:site_name"][@content="东海岸人 - 中國報 EC ChinaPress"]
+@if( $eastcoast ) {
+  site_name: "东海岸人 China Press"
+}
+
+$johor: //meta[@property="og:site_name"][@content="柔佛人 - 中國報 Johor China Press"]
+@if( $johor ) {
+  site_name: "#柔佛人"
+}
+
+$kl: //meta[@property="og:site_name"][@content="KL人- 中國報 KL ChinaPress"]
+@if( $kl ) {
+  site_name: "KL人"
+}
+
+$penang: //meta[@property="og:site_name"][@content="北马人 - 中国报 Penang China Press"]
+@if( $penang ) {
+  site_name: "北马人 China Press"
+}
+
+site_name: //meta[@property="og:site_name"]/@content
+description: //meta[@name="description"]/@content
+@if_not( //h1[has-class("entry-title")] ) {
+  title: //title
+}
+
+
+
+?exists: //div[has-class("like_post")]
+!not_exists: //ul[has-class("advertorial-listing")]//li/a[contains(@href, "?post_id=")]
+#### main ####
+body: //article
+title:  //h1[has-class("entry-title")]
+author: ""
+
+
+
+#### video ####
+<video>: //iframe[contains(@src, ".mp4")]
+
+@set_attr(class, "fb-video-bad-src"): //iframe[contains(@src, "facebook.com/v2.3/plugins/video")]
+@match(href.(.+).mute, 1): //iframe[has-class("fb-video-bad-src")]/@src
+@replace(.+, "https://www.facebook.com/plugins/video.php?href=$0" ): //iframe[has-class("fb-video-bad-src")]/@src
+
+<iframe>: //script[contains(@src, "video.foxnews")]
+@replace((.+)(\W\Wvideo\Wfoxnews\Wcom\Wv\W)(.+)(id.\d+)(.+), $2video-embed.html?video_$4): $@/@src
+
+
+
+#### cover ####
+cover: $body//div[has-class("fuwen-image-wrap")]/img
+
+$wrong_cover: //meta[@itemprop="image"][contains(@content, "sharing")]
+@if( $wrong_cover ) {
+  image_url: ($body//img/@src)[1]
+}
+image_url: //meta[@property="og:image"]/@content
+
+
+
+#### publication dates ####
+@datetime(0, "zh", "yyyy年M月dd日"): //time[has-class("entry-date published")]
+published_date: $@
+
+@wrap(<date>, class, "publishing"): //div[has-class("post-view")][./div[has-class("post-view post-view-parent")]]/text()
+@remove: //date[not(normalize-space(text()))][not(descendant::*)]
+$hours_ago: //date[has-class("publishing")][contains(text(), "小时前")]
+@if( $hours_ago ) {
+  @replace("小时前", " hours ago"): //date[has-class("publishing")]
+  @datetime: //date[has-class("publishing")]
+  published_date: $@
+  @remove: //date[has-class("publishing")]
+}
+
+@clone: //meta[@property="og:url"]
+@prepend_to($body): $@
+<pubdate>: $@
+@append(@content): //pubdate
+@urldecode: //pubdate
+@match(chinapress.com.my.(\d+), 1): //pubdate
+@replace((\d{4})(\d{2})(\d{2}), $1/$2/$3): //pubdate
+@datetime(0, "en-US", "yyyy-MM-dd"): //pubdate/text()
+published_date: $@
+@remove: //pubdate
+
+@replace("天前", " days ago, 0:00"): //date[has-class("publishing")]
+@replace("星期前 ", " weeks ago, 0:00"): //date[has-class("publishing")]
+@replace("月前 ", " months ago, 0:00"): //date[has-class("publishing")]
+@replace("年前 ", " years ago, 0:00"): //date[has-class("publishing")]
+@datetime: //date[has-class("publishing")]
+published_date: $@
+@remove: //date[has-class("publishing")]
+
+
+
+#### rudimentary content ####
+@remove: //div[has-class("addtoany-noscript")]
+@remove: //div[has-class("below-entry-meta")]
+@remove: //div[has-class("like_post")]
+@remove: //a[@href="https://eclassified.my/en/"]
+@remove: //div[has-class("post_gallery_thumbnail")]
+@remove: //div[has-class("above-entry-meta")]
+@remove: //div[@id="post_id"]
+@remove: //div[has-class("post_id_item")]
+@remove: $body//script
+@remove: $body//noscript
+@remove: //div[has-class("addtoany_share_save_container")]
+@remove: //div[has-class("mid-banner-adv")]
+@remove: //img[@alt="Advertisement"]
+@remove: //a[@href="http://www.chinapress.com.my/wp-content/uploads/2018/02/hotpic-a1.jpg"]
+@remove: //img[@alt="hotpic a1"]
+
+
+
+#### fix text formatting ####
+<pic>: //img[@height < 50 or @width < 50]
+@replace("\u00a0", " "): $body//text()
+@after(<br>): //blockquote//p
+# <br>: //p[not(normalize-space(text()))][not(descendant::*)]
+
+
+@remove: //p[count(child::*) = 2][./br[./next-sibling::br]][not(normalize-space(text()))]
+
+
+#### description ####
+$short_original_descr: //meta[@name="description"][string-length(@content) < 7]
+
+$first_p: ($body//div[has-class("entry-content")]//p[not(.//img) and not(descendant-or-self::*[contains(., "图片：")])][normalize-space(text()) or ./descendant::*])[1]
+@append(<firstp>, content, $first_p): //html
+$short_first_p: //firstp[string-length(@content) < 8]
+
+@if_not( $short_first_p ) {
+  description!: $first_p
+}
+
+
+
+#### slideshow ####
+<slideshow>: //div[has-class("post_gallery")]
+<figure>: //li[.//img]
+<figcaption>: $@//div[has-class("post_gallery_caption")]
+
+$slideshow_article: //div[has-class("entry-content")][count(child::p) < 3]
+@if( $slideshow_article ) {
+  <div>: //slideshow[has-class("post_gallery")]
+}
+
+
+
+#### images ####
+<figure>: //table[count(descendant::img) = 1]
+
+
+
+#### set high-res and href for images  ####
+@set_attr(src, @data-src): //img[@data-src]
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+
+## href for .gif images
+@wrap(<figure>): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@after(<a>, href, @href, class, "gif-link"): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@wrap(<figcaption>): $@
+@append(@href): //a[has-class("gif-link")]
+
+
+
+#### fix nested ####
+<div>: $body//figure[count(.//img)>1]
+@after_el(./..): //figcaption/img
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+
+#### unsupported content ####
+@unsupported: $body//div[@id="vt-video-player"]
+@unsupported: $body//div[has-class("infogram-embed")]
+@unsupported: $body//div[contains(@class, "result-wrapper")]
+
+@unsupported: $body//form
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+@wrap(<unsupported>): $body//script[contains(@src, "chartbeat")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+@unsupported: $body//div[has-class("woobox-offer")]
+@unsupported: $body//div[@id="woobox-root"]

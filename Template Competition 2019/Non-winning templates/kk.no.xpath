@@ -1,0 +1,226 @@
+~version: "2.1"
+
+
+#### site_name from main page ####
+site_name: "kk"
+
+
+#### conditions for target pages  ####
+?exists: //time[has-class("published")]
+
+
+
+#### main properties ####
+body: //div[@itemprop="articleBody"]
+kicker: //h1[has-class("intro")]
+title:  //h2[has-class("headline")]
+title:  //h1[has-class("headline")]
+subtitle: //p[has-class("standfirst")]
+published_date: //time[@itemprop="datePublished"]/@datetime
+
+@append(<authors>): $body
+@append_to($body/authors): //div[has-class("byline")]//span[has-class("name")]
+@combine(" "): $body/authors//span[has-class("firstname")]/next-sibling::span[has-class("lastname")]
+@remove: $body/authors/span[has-class("name")]/text()
+@combine(", "): $body/authors/span[has-class("name")]/next-sibling::span[has-class("name")]
+
+@set_attr(name-content, .//text()): $body/authors/span[has-class("name")]
+@replace("\u000A", ""): $body/authors/span[has-class("name")]/@name-content
+author: $body/authors/span[has-class("name")]/@name-content
+@remove: $body/authors
+
+#### cover ####
+@prepend_to($body): //header[has-class("row")]//div[has-class("columns")]/prev-sibling::div
+@set_attr(class, "main-figure"): $@
+cover: //div[has-class("main-figure")][.//img][count(descendant::img) < 2]//figure
+
+
+
+#### fix text formatting ####
+@after(<br>): //blockquote//p
+<pic>: //img[@height < 100 or @width < 100]
+
+@replace("\u000D", " "): $body//text() #newline
+@replace("\u00a0", " "): $body//text() #nbsp
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+
+
+
+#### set high-res and href for images  ####
+@set_attr(src, @data-src): //img[@data-src]
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+## href for .gif images
+@wrap(<figure>): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@after(<a>, href, @href, class, "gif-link"): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@wrap(<figcaption>): $@
+@append(@href): //a[has-class("gif-link")]
+
+
+
+#### rudimentary content ####
+@remove: //a[has-class("toggle")]
+@remove: $body//article[has-class("native-advertisement")]
+@remove: //div[@data-cke-hidden-sel]
+@remove: $body//*[@hidden]
+@remove: $body//img[contains(@src, "adServer")]
+
+
+
+#### ####
+<aside>: //div[has-class("konkurranse")]
+
+@wrap_inner(<u>): //aside[has-class("panel")][has-class("black")]//h5[has-class("section-title")]
+<div>: //aside[has-class("panel")]
+@after(<hr>, class, "panel"): //div[has-class("panel")]
+@before(<hr>, class, "panel"): //div[has-class("panel")]
+@remove: $body//br[./prev-sibling::hr][./next-sibling::hr]
+@combine: //hr[has-class("panel")]/next-sibling::hr[has-class("panel")]
+
+
+
+#### video ####
+$yt_video: //div[has-class("flex-video")]//iframe[contains(@src, "videoproxy.kk.no/video/embed")]
+@replace("//videoproxy.kk.no/video", "https://www.youtube.com"): $yt_video/@src
+
+
+
+#### slideshow ####
+<slideshow>: //div[has-class("image-collection")]
+
+@wrap(<figure>): //slideshow//div[has-class("item")]
+@clone: //figure/div[has-class("item")][not(.//img)]
+@background_to_image: $@
+@set_attr(style, ""): $@/../div[has-class("item")]
+
+
+@wrap(<figure>): //slideshow//a[has-class("grid-item")]
+<figcaption>: $@//div[has-class("gallery-image-caption")]
+
+@map( //figure[./a[has-class("grid-item")]] ) {
+  $grid_figure: $@
+  @wrap_inner(<a>, href, $grid_figure/a/@href): $grid_figure//figcaption
+}
+
+<figcaption>: //slideshow//figure//div[has-class("caption")]
+@remove: //div[has-class("masonry-button")]
+
+<div>: //div[@itemprop="articleBody"][count(child::p) < 3]//slideshow[has-class("image-collection")]
+<div>: //div[@itemprop="articleBody"]//slideshow[@data-slideshow-type="Masonry"]
+
+
+
+#### video ###
+$jwplatform: //figure[.//script[contains(text(), "jwplatform.com")]][.//div[@data-videoid]]
+
+@map( $jwplatform ) {
+  $cur_jwplatform: $@
+  @wrap_inner(<rudimentary>): $cur_jwplatform
+  @append_to($cur_jwplatform): $cur_jwplatform//div[@data-videoid]
+  @remove: $cur_jwplatform//rudimentary
+  <video>: $cur_jwplatform/div[@data-videoid]
+  @replace(.+, "https://content.jwplatform.com/videos/$0.mp4"): $cur_jwplatform/video/@data-videoid
+  @set_attr(src, @data-videoid): $cur_jwplatform/video
+}
+
+
+
+#### images ####
+@background_to_image: //figure/div[contains(@style, "background")]
+
+
+
+#### comercial ####
+@prepend_to($body): //div[has-class("content-marketing-ribbon")]
+<aside>: $@
+
+@append_to($body): //div[has-class("has-section-title")][./div[has-class("copy")]//p[contains(., "Dette er annonsørinnhold")]]
+<footer>: $@
+@before(<hr>): $@
+
+<figure>: //div[has-class("hero-unit")][.//figure]
+$img_article_href: $@
+<div>: $img_article_href//figure
+<figcaption>: $img_article_href//div[has-class("copy")]
+@wrap_inner(<a>, href, $img_article_href/a/@href): $@
+
+
+
+#### related article ####
+<table>: $body//article[has-class("preview")]
+$read_more: $@
+
+@set_attrs(srcset, @data-srcset): $read_more//img
+@map( $read_more//img[@srcset] ) {
+  $cur: $@
+  @append(<div>): //head
+  $box: $@
+  @while( $cur[string-length(@srcset)>0] ) {
+    @clone: $cur
+    $src: $@
+    @append_to($box): $src
+    
+    @set_attr(src, @srcset): $src
+    @match(".+?\\s"): $src/@src
+    @match("(?:\\s|^).+?(\\d+)w", 1): $src/@srcset
+    @match(".+?,(.+)", 1): $cur/@srcset
+  }
+  @set_attr(src, $box/img[not(../img/@srcset>@srcset)]/@src): $cur
+}
+
+@map( $read_more ) {
+  $cur: $@
+  @append_to($cur): $cur//h1
+  @wrap_inner(<a>, href, $cur/a/@href): $@
+  @wrap_inner(<b>): $@
+  @append_to($cur//h1): $cur//p[@itemprop="description"]
+}
+
+@wrap(<th>, class, "img", align, "left"): $read_more/a
+@wrap(<th>, class, "h1", align, "left"): $read_more/h1
+<pic>: $read_more//img
+@set_attrs(width, "150"): $@
+
+@prepend("Les også:"): $read_more//h1
+@wrap(<span>, class, "rm-badge"): $@
+@after(<br>): $@
+
+@set_attr(border, "0"): $read_more
+
+
+
+######
+@remove: //div[@itemprop="articleBody"]//hr[not(./next-sibling::*)]
+
+
+
+#### fix nested ####
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+
+#### unsupported content ####
+@wrap(<unsupported>): //div[has-class("kkmila nedtelling")]
+@wrap(<unsupported>): //script[has-class("yp")]
+@unsupported: //nav[has-class("kkmila")]
+
+@unsupported: $body//div[has-class("quiz")]
+@unsupported: $body//form
+
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported

@@ -1,0 +1,109 @@
+~version: "2.0"
+
+<div>: //p/img/..
+<div>: //p/iframe/..
+site_name: "Metroradio.com.hk"
+
+####
+?exists: //form[@method="post"][contains(@action, 'NewsId=')] 
+?exists: //form[@method="post"][contains(@action, 'NewsID=')]
+
+body: //span[@id="ContentPlaceHolder1_IndividualNewsList_lblContent_0"]
+title: //span[@id="ContentPlaceHolder1_IndividualNewsList_lblTitle_0"]
+
+description: $body/text()
+
+@replace("/", "-"): //span[@id="ContentPlaceHolder1_IndividualNewsList_lblTime_0"]/text()
+@datetime(): $@
+published_date: $@
+
+<slideshow>: //div[has-class("slideshow")]
+<div>: //slideshow//table
+@wrap(<figure>): //div[has-class("slides")]/img
+@after(@alt): $@/img
+@wrap(<figcaption>): $@
+@remove: //slideshow//a[has-class("next")]
+@remove: //slideshow//a[has-class("previous")]
+@prepend_to($body): //slideshow
+
+image_url: $body//img/@src
+image_url: //meta[@property="og:image"]/@content
+
+@debug: "1"
+
+####
+?exists: //form[@method="post"][contains(@action, 'ExpertId=')] 
+?exists: //form[@method="post"][contains(@action, 'ExpertID=')]
+
+title: //span[@id="ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolder1_dlCurrentNews_ctl00_lblSubject"]
+body: //span[@id="ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolder1_dlCurrentNews_ctl00_lblContent"]
+
+@remove: //img[contains(@src, 'MetroAdmin/WebResource.axd')]
+
+@debug: "2"
+
+####
+?exists: //form[@method="post"][contains(@action, 'TradingIdeasID=')] 
+?exists: //form[@method="post"][contains(@action, 'TradingIdeasId=')]
+
+title: //span[@id="ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolder1_SubjectText"]
+body: //span[@id="ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolder1_ContentText"]
+
+@replace("/", "-"): //span[@id="ctl00_ctl00_ContentPlaceHolder1_ContentPlaceHolder1_PublishDateText"]/text()
+@datetime(): $@
+published_date: $@
+
+@remove: //img[contains(@src, 'MetroAdmin/WebResource.axd')]
+
+@debug: "3"
+
+
+####
+
+?exists: //form[@method="post"][contains(@action, 'music.aspx?m=')]
+
+<div>: //table
+body: //div[has-class("music997")]
+title: //td[has-class("detail_songtitle")]
+
+@datetime: //span[@id="ctl00_ctl00_CategoryContentPlaceHolder_PageContentPlaceHolder_lblSongDate"]/text()
+published_date: $@
+
+@after(<hr>): //td[has-class("detail_songinfo")]
+@after(<hr>): //div[@id="ctl00_ctl00_CategoryContentPlaceHolder_PageContentPlaceHolder_PanelSongIntro"]
+
+<h2>: //td[has-class("subtitle")]
+@wrap(<b>): $@
+
+
+@remove: //div[has-class("spacer20")]
+@remove: //div[@id="test-popup"]
+@remove: //td/span[@id="ctl00_ctl00_CategoryContentPlaceHolder_PageContentPlaceHolder_lblSongDate"]/..
+@remove: //a[@id="ctl00_ctl00_CategoryContentPlaceHolder_PageContentPlaceHolder_lnkPrev"]
+@remove: //a[@id="ctl00_ctl00_CategoryContentPlaceHolder_PageContentPlaceHolder_lnkNext"]
+@remove: //a[@id="ctl00_ctl00_CategoryContentPlaceHolder_PageContentPlaceHolder_A1"]
+
+
+####
+?exists: //form[@method="post"][contains(@action, 'DJDetail.aspx?DJID=')]
+
+<div>: //table
+<div>: //td/img/..
+<div>: //span/img/..
+body: //span[@id="ctl00_ctl00_CategoryContentPlaceHolder_PageContentPlaceHolder_lblContent"]//img/next-sibling::div
+cover: //span[@id="ctl00_ctl00_CategoryContentPlaceHolder_PageContentPlaceHolder_lblContent"]//img
+
+<ul>: $body/tbody
+<li>: $@/tr
+
+
+
+####
+?not_exists: //form[@method="post"][contains(@action, '=')] 
+
+site_name: "Metroradio.com.hk"
+title: ""
+description: ""
+
+@debug: "4"
+

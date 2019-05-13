@@ -1,0 +1,151 @@
+~version: "2.0"
+
+
+#### nested ####
+<div>: //p/img/..
+<div>: //h3/figure/..
+
+
+#### body ####
+site_name: "Wales Online"
+body: //div[has-class("article-body")]
+body: //ol[has-class("image-gallery")]
+title: //h1[@itemprop="headline name"]
+subtitle: //p[@itemprop="description"]
+subtitle: //p[has-class("sub-title")]
+published_date: //time[has-class("date-published")]/@datetime
+cover: //figure[has-class("lead-article-image")] 
+
+@remove: //div[has-class("author")]/span[has-class("job-title")]
+@combine: //div[has-class("author")]/next-sibling::div[has-class("author")]
+@combine(", "): //div[has-class("author")]/span[@rel="author"]
+@combine(", "): //div[has-class("author")]/a[has-class("publication-theme")]
+author: //div[has-class("author")]
+
+
+#### images resolution ####
+@set_attr(src, @data-src): //img[@data-src]
+
+@map( //img[@srcset] ) {
+  $cur: $@
+  @append(<div>): //head
+  $box: $@
+  @while( $cur[string-length(@srcset)>0] ) {
+    @clone: $cur
+    $src: $@
+    @append_to($box): $src
+    
+    @set_attr(src, @srcset): $src
+    @match(".+?\\s"): $src/@src
+    @match("(?:\\s|^).+?(\\d+)w", 1): $src/@srcset
+    @match(".+?,(.+)", 1): $cur/@srcset
+  }
+  @set_attr(src, $box/img[not(../img/@srcset>@srcset)]/@src): $cur
+}
+
+
+#### related ####
+<related>: //aside[has-class("read-more-links")]
+@append_to($body): //related
+@combine: //related/next-sibling::related
+
+@remove: //strong[starts-with(text(), 'Read more:')]
+@remove: //strong[contains(text(), "RELATED STORIES:")]
+@remove: //strong[contains(text(), "Related articles:")]
+@remove: //strong[contains(text(), "Related stories:")]
+
+
+#### cover video ####
+@if( //meta[@property="videoUrl"]/@content ) {
+  @prepend(<video>): $body
+  $main_video: $@
+  @set_attr(src, //meta[@property="videoUrl"]/@content): $main_video
+  @json_to_xml: //div[has-class("json-placeholder")]/@data-json
+  @html_to_dom: $@//videoHeadline
+  <figcaption>: $@
+  $video_title: $@
+  @wrap(<figure>): $main_video
+  @append_to($main_video): $video_title
+}
+
+
+#### photo with link to gallery ####
+<figure>: //div[has-class("image-gallery-placeholder")]
+@map( //figure[has-class("image-gallery-placeholder")] ) {
+  $galery_img_link: $@
+  <figcaption>: $galery_img_link//div[has-class("gallery-title")]
+  @set_attr(href, @content): $galery_img_link//img
+  $pic_href: $@
+  <a>: $galery_img_link//div[has-class("call-to-action")]/span[has-class("label")]
+  @set_attr(href, $pic_href): $@
+  @append_to($galery_img_link//figcaption[has-class("gallery-title")]): $$
+  @before(<br>): $@
+}
+
+
+#### gallery article ####
+<cite>: //figcaption/span[has-class("credit")]
+@remove: //span[has-class("img-count")]
+
+@if( //ol[has-class("image-gallery")] ) {
+  @prepend_to($body): //div[has-class("intro-text")]
+}
+
+
+#### social iframes ####
+<iframe>: //blockquote[has-class("instagram-content")]
+@set_attr(src, ./div/a/@href): //iframe[has-class("instagram-content")]
+
+<iframe>: //div[has-class("html-embed")]
+@set_attr(src, @data-callback-url): $@
+@inline: //iframe[has-class("html-embed")]
+
+<iframe>: //div[has-class("html-embed-tweet")]
+@set_attr(src, @data-callback-url): $@
+@inline: //iframe[has-class("html-embed-tweet")]
+
+
+#### youtube videos ####
+@prepend_to($body): //div[has-class("article-body")]/prev-sibling::div[has-class("mod-video")][@data-player-type="youtube"]
+
+<iframe>: //div[has-class("mod-video")][@data-player-type="youtube"]
+@set_attr(src, ./div[has-class("youtube-wrapper")]/div[has-class("video-preloader")]/div[has-class("video-thumbnail")]/img/@src): $@
+@replace("img.", ""): $@
+@replace("/0.jpg", ""): $@
+@replace("vi", "embed"): $@
+
+
+#### rudimental ####
+@remove: //div[has-class("poll")]
+@remove: //form[has-class("skinny-signup")]
+@remove: //div[has-class("mod-unsupported")]
+@remove: //div[has-class("embedded-image-grid")]
+@replace("\u00a0", " "): $body//text()
+
+
+#### download_placeholder_with_image ####
+$download_placeholder_with_image: //div[has-class("embed-placeholder")]
+<figcaption>: $download_placeholder_with_image//div[has-class("embed-placeholder-caption")]
+<div>: $download_placeholder_with_image//div[has-class("embed-placeholder-thumbnails")]/a
+<figure>: $download_placeholder_with_image
+
+
+#### factbox ####
+@remove: //div[has-class("factbox")][./h3[contains(text(), "Sign up for Derbyshire Live newsletters")]]
+@remove: //div[has-class("factbox")][./h3[contains(text(), "Join our Crimewatch Facebook group")]]
+
+@before(<hr>): //div[has-class("factbox")]
+@after(<hr>): //div[has-class("factbox")]
+<div>: //div[has-class("factbox-content")]/strong[1]
+
+
+#### timeline ####
+@before(<hr>): //div[has-class("timeline")]
+<div>: //div[has-class("timeline")]/strong[1]
+@remove: //div[has-class("timeline")]//span[has-class("publication-theme-border")]
+
+
+#### unsupported ####
+@unsupported: //div[has-class("mod-video")][not(@data-player-type="youtube")]
+@unsupported: //div[has-class("live-event-container")]
+

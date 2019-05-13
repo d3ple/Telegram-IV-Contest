@@ -1,0 +1,113 @@
+~version: "2.1"
+
+?path: /.+
+
+#### main ####
+@if( //a[has-class("db-logo")][@href="https://www.deshabhimani.com/english"] ) {
+  site_name: "deshabhimani"
+}
+
+site_name: "ദേശാഭിമാനി"
+body: //div[has-class("innerSec")]
+title: $body/h1
+
+author: //small[has-class("db-postDtls")]//a
+author: //small[has-class("db-postDtls")]/span
+
+@json_to_xml: //script[contains(text(), "datePublished")]
+published_date: $@/datePublished 
+@wrap(<pubdate>): //small[has-class("db-postDtls")]/text()
+@replace("Updated:", ""): //pubdate
+published_date: //pubdate
+
+<figure>: //div[has-class("img-Inner-Main")]
+cover: $body//figure[has-class("img-Inner-Main")][.//img]
+<figcaption>: //div[has-class("db-imgtext")]
+
+@if( //meta[@property="og:image"][@content="https://deshabhimani.com/images/website-social-share-image.png"] ) {
+  image_url: $body//img/@src
+}
+
+
+
+#### text ####
+<blockquote>: //div[has-class("seeAlso")]
+
+
+
+#### images ####
+<figure>: //div[has-class("innerimg")]
+<figcaption>: //div[has-class("db-innerimgtxt")]
+
+
+
+#### set high-res and href for images  ####
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+
+
+#### related article ####
+<related>: //div[has-class("db-innOther")]
+<h2>: //related//div[has-class("heading")]
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+@remove: //related//ul/li[position()>10]
+
+
+
+#### fix text formatting ####
+<pic>: //img[@height < 50 or @width < 50]
+
+@replace("\u000D", " "): $body//text()
+@replace("\u00a0", " "): $body//text()
+@wrap(<paragraph>): $body//text()[./next-sibling::br[./next-sibling::br] and ./prev-sibling::br[./prev-sibling::br]]
+<div>: //p[.//paragraph]
+<div>: //em[.//paragraph]
+@wrap_inner(<em>): $@//paragraph
+<p>: //paragraph
+@wrap(<p>): $body/text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+
+
+
+#### rudimentary content ####
+@remove: //div[has-class("breadCrums")]
+@remove: //small[has-class("db-postDtls")]
+@remove: //div[has-class("db-InSocial")]
+@remove: //div[has-class("db-link")]
+@remove: //div[has-class("shareSocial")]
+@remove: //div[has-class("db-innOther")]
+@remove: //a[@name="commentNews"]
+@remove: //div[has-class("commentBox")]
+@remove: //div[has-class("read-also")]
+
+
+
+#### fix nested ####
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+
+#### unsupported content ####
+@unsupported: $body//form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]

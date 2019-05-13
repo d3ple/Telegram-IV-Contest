@@ -1,0 +1,185 @@
+~version: "2.1"
+
+
+#### site_name from main page ####
+site_name: "NEWSru.co.il"
+
+
+#### conditions for target pages  ####
+?exists: //div[has-class("main-news-body")]
+!exists: //meta[@property="article:published"]
+
+
+#### main properties ####
+body: //div[has-class("main-news-body")]
+title:  //h1
+published_date: //meta[@property="article:published"]/@content
+
+
+#### fix text formatting ####
+@after(<br>): //blockquote//p
+<pic>: //img[@height < 100 or @width < 100]
+@replace("\u000D", <br>): $body//text() #newline
+@html_to_dom: $@
+@replace("\u2028", <br>): $body//text() #newline
+@html_to_dom: $@
+
+
+
+#### set high-res and href for images  ####
+@set_attr(src, @data-src): //img[@data-src]
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+## href for .gif images
+@wrap(<figure>): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@after(<a>, href, @href, class, "gif-link"): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@wrap(<figcaption>): $@
+@append(@href): //a[has-class("gif-link")]
+
+
+
+#### rudimentary content ####
+@remove: //div[has-class("info")]
+@remove: //table[.//a[@href="https://vk.com/newsru_co_il"]]
+@remove: //a[has-class("fb_comment_link")]
+@remove: //*[@src="http://newsru.co.il/img/ico/ino_logo3.gif"]
+
+
+
+#### gallery ####
+$gallery: //div[has-class("iamges")]
+# $gallery?: //div[has-class("photoreport")]
+
+@set_attr(class, "ingallery-figure"): $gallery/div[./a[contains(@href, "pict/big")]/img]
+@set_attr(class, "ingallery-figure-first"): (//div[has-class("ingallery-figure")])[1]
+
+@clone: //div[has-class("ingallery-figure-first")]/a
+<iframe>: $@
+@set_attrs(src, @href, class, "big_img_page"): $@
+@inline: $@
+$big_img_page: $@
+@after_el($big_img_page): $big_img_page//td[has-class("nav")]//span[contains(., "Фото")][contains(., "из")]
+@set_attrs(class, "gallery-quantity"): $@
+@match(.+из\s(\d+), 1): $@/text()
+@set_attrs(quantity, ./text()): //span[has-class("gallery-quantity")]
+@remove: $big_img_page
+@prepend_to( //body ): $body//span[has-class("gallery-quantity")]
+
+$small_gallery: //span[has-class("gallery-quantity")][@quantity < 30]
+
+@if( $small_gallery ) {
+  @remove: //div[has-class("ingallery-figure")]
+  @remove: $gallery//a[has-class("slideshow")]
+  @remove: //div[has-class("ingallery-figure-first")]/div[has-class("no-align")]
+  @set_attr(class, "btn next"): //div[has-class("ingallery-figure-first")]/a
+  
+  @repeat( $small_gallery ) {
+      <iframe>: //div[has-class("ingallery-figure-first")]/a[has-class("btn next")]
+      @set_attrs(src, @href, class, "big_img_page"): $@
+      @inline: $@
+      $big_img_page: $@
+      @after_el($big_img_page): $big_img_page//a[has-class("btn next")]
+      @after_el($big_img_page): $big_img_page//td[./img[has-class("main")]]
+      <figure>: $@
+      <figcaption>: //div[has-class("alt")]
+      <cite>: $@//span[has-class("src")]
+      @remove: $big_img_page
+  }
+  
+  @remove: //div[has-class("ingallery-figure-first")]//a[has-class("btn next")]
+}
+
+
+@if_not( $small_gallery ) {
+  @set_attr(class, "ingallery-figure"): //div[has-class("ingallery-figure-first")]
+  $outgallry_link_container: //div[has-class("ingallery-figure")][./a[contains(@href, "pict/big")]]
+  
+  @map( $outgallry_link_container ) {
+      $cur_container: $@
+      $cur_link: $@/a
+      <iframe>: $cur_link
+      @set_attrs(src, @href, class, "big_img_page"): $@
+      @inline: $@
+      $big_img_page: $@
+      @after_el($big_img_page): $big_img_page//a[has-class("btn next")]
+      @after_el($big_img_page): $big_img_page//td[./img[has-class("main")]]
+      <figure>: $@
+      <figcaption>: //div[has-class("alt")]
+      <cite>: $@//span[has-class("src")]
+      @remove: $big_img_page
+      @remove: $cur_container/div[has-class("no-align")]
+  }
+  
+  @wrap(<figcaption>): //div[has-class("iamges")]//a[has-class("slideshow")]
+  @remove: //div[has-class("ingallery-figure")]//a[has-class("btn next")]
+}
+
+
+<slideshow>: //div[has-class("iamges")]
+cover: $body//slideshow[has-class("iamges")][count(descendant::img) = 1]//figure
+
+<figure>: //div[has-class("photoreport")]/div[./a]
+<figcaption>: $@//div[has-class("no-align")]
+
+
+
+### fixes ###
+@set_attrs(width, "", height, ""): $body//iframe
+@wrap(<aside>): //div[has-class("photoreport")]//a[has-class("slideshow")]
+
+
+
+
+##### img_link ####
+$wrong_cover: //meta[@property="og:image"][@content="http://newsru.co.il/img/og100x50.gif"]
+
+@if( $wrong_cover ) {
+  image_url: ($body//img/@src)[1]
+}
+
+
+
+#### related ####
+@append_to($body): //div[has-class("news-body")]//div[has-class("links-caption")]
+<h2>: $@
+@wrap(<related>): $@
+@append_to($body): //div[has-class("news-body")]//div[has-class("theme-link")]
+@wrap(<related>): $@
+@remove: //related//a[has-class("tlink")]
+@combine: //related/next-sibling::related
+
+@append(<ul>): //related
+@append_to( //related/ul ): //related//a
+@wrap(<li>): $@
+@remove: //related/ul/li[position() > 8]
+
+
+
+#### fix nested ####
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+
+#### unsupported content ####
+@unsupported: $body//div[has-class("quiz")]
+@unsupported: $body//form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+@wrap(<unsupported>): $body//script[contains(@src, "chartbeat")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+@unsupported: $body//div[has-class("woobox-offer")]
+@unsupported: $body//div[@id="woobox-root"]

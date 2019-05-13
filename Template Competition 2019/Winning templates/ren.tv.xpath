@@ -1,0 +1,69 @@
+~version: "2.0"
+
+?exists: //div[@itemprop="articleBody"]
+body: //div[@itemprop="articleBody"]
+title: //h1[@itemprop="headline"]
+subtitle: //div[@itemprop="description"]
+published_date: //time[@itemprop="datePublished"]/@datetime
+author: //div[has-class("autor__blog")]//div[has-class("views-field-title")]
+author_url: $author//span[has-class("field-content")]/a/@href
+
+@set_attr(class, "styles-caption-video"): //p/em[starts-with(text(), 'Видео:')]/..
+
+@before_el(./..): //p[has-class("styles-caption-video")]/em/img
+<figcaption>: //p[has-class("styles-caption-video")]/em
+
+<figure>: //p[has-class("styles-caption-video")]
+@wrap(<figcaption>): //figure[has-class("styles-caption-video")]/text()
+
+<figure>: //div[has-class("image_news")]
+<figcaption>: //figure[has-class("image_news")]/div[has-class("alt")]
+cover: //figure[has-class("image_news")]
+image_url: //figure[has-class("image_news")]/img
+
+<b>: $body//div[has-class("view-news")]//h3/a
+@append_to($body): $body//div[has-class("view-news")]
+<related>: $body//div[has-class("view-news")]
+@remove: $body//div[has-class("view-news")]
+
+@before_el(./..): //span/img
+<div>: //p/img/..
+
+@map($body//video) {
+  $cur_video: $@
+  @json_to_xml: $cur_video/@data-player
+  $data_player: $@
+  $video_src: $data_player//item[1]/src/text()
+  @set_attr(src, $video_src): $cur_video
+}
+
+<div>: //p/iframe/..
+
+@before_el(./..): //em/div[has-class("player")]
+<figure>: //p/div[has-class("player")]/..
+<figcaption>: //figure/div[has-class("player")]/next-sibling::em
+
+
+@combine: //div[has-class("player")]/next-sibling::*[has-class("styles-caption-video")]
+<figcaption>: //div[has-class("player")]/em
+<figure>: //div[has-class("player")]
+
+
+@combine: //div/img/../next-sibling::p/em[starts-with(text(), 'Фото:')]/..
+$photo: $@
+<figcaption>: $photo/em
+<figure>: $photo
+
+
+
+####
+?path: /o-kanale/novosti/.*  
+
+body: //div[@id="content"]
+title: $body//h1
+
+<figure>: //div[has-class("image_news")]
+<figcaption>: //figure[has-class("image_news")]/div[has-class("alt")]
+@set_attr(src, //figure[has-class("image_news")]/a/@href): //figure[has-class("image_news")]/a/img
+cover: //figure[has-class("image_news")]
+image_url: $cover

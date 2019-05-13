@@ -1,0 +1,132 @@
+~version: "2.1"
+
+?path: /.+
+
+#### main ####
+site_name: "NOVA GENTE"
+body: //div[@id="section-newsContainer"]
+kicker: //div[has-class("news-itemInfo")]/span[has-class("antetitulo")]
+title:  //div[has-class("news-itemInfo")]/h1
+subtitle: //div[has-class("article-lead-intro")]
+published_date: //span[@property="dc:date dc:created"]/@content
+
+
+#### journals ####
+?exists: //article[has-class("revista-mainArea")]
+
+body: //article
+kicker: //h3[has-class("revistas-highlight")]
+subtitle: //header/p
+cover: //div[has-class("revista-capaArea")][not(.//div[has-class("carousel")])]//img
+image_url: //div[has-class("revista-capaArea")]//img/@src
+
+<li>: //div[has-class("publicacao")]
+@wrap(<ul>): $@
+<li>: //div[has-class("edicao")]
+@wrap(<ul>): $@
+<li>: //div[has-class("datePub")]
+@wrap(<ul>): $@
+@combine: //ul/next-sibling::ul
+
+<ul>: //div[has-class("bancaBtn-area")]
+@wrap(<li>): $@/a
+
+@remove: //div[has-class("header-area")]
+@remove: //div[has-class("revista-body-innerBottom")]
+@remove: //header/h1
+
+
+
+?true
+#### fix text formatting ####
+<pic>: //img[@height < 50 or @width < 50]
+<pic>: //img[@height < 101]
+@set_attr(optional, true): $@
+
+@replace("\u00a0", " "): $body//text()
+@wrap(<p>): $body/text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+
+<footer>: //p[count(child::span) = 1]/span[@style="color:#808080;"][not(./next-sibling::*)][not(./prev-sibling::*)]/span[@style="font-size:10px;"][not(./next-sibling::*)][not(./prev-sibling::*)]
+
+@wrap(<paragraph>): //p/text()[./prev-sibling::br[./prev-sibling::br] or ./next-sibling::br[./next-sibling::br]]
+<div>: //p[./paragraph]
+<p>: //paragraph
+
+@wrap(<paragraph>): //strong/text()[./prev-sibling::br[./prev-sibling::br] or ./next-sibling::br[./next-sibling::br]]
+@wrap_inner(<strong>): //strong/paragraph
+<div>: //strong[./paragraph]
+<p>: //paragraph
+
+
+
+##### cover ####
+<slideshow>: //div[has-class("carousel")]
+<figure>: $@//div[has-class("item")]
+<figcaption>: $@//div[has-class("carousel-caption")]
+
+@map( //slideshow ) {
+  @after_el($@): $@//iframe
+} 
+
+
+@set_attr(src, @data-src): //img[@data-src]
+cover: //div[has-class("field-item")]/a/img
+
+
+#### set high-res and href for images  ####
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+
+
+#### related article ####
+<related>: //div[has-class("vejaTB-inner")]
+<h2>: //related..
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+
+
+
+#### rudimentary content ####
+@remove: //noscript
+@remove: //p[has-class("intagram-text")]
+@remove: //a[@href="https://www.instagram.com/revistanovagente/"]
+@remove: //div[@id="tags"]
+@remove: //div[has-class("ReadMoreContainer")]
+@remove: //div[has-class("article-share-area")]
+@remove: //div[has-class("autor-info")]
+@remove: //span[has-class("categoria-type")]
+@remove: //div[has-class("news-top-mainContainer")]
+@remove: //meta[@name="author"]
+@remove: //span[has-class("jump_to_video")]
+
+
+
+
+#### fix nested ####
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+#### unsupported content ####
+@unsupported: //form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]

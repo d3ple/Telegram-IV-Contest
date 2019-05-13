@@ -1,0 +1,169 @@
+~version: "2.1"
+
+
+####
+# site_name: "5 РОДНОЙ"
+description: //meta[@property="og:description"]/@content
+
+
+
+#### media pages ####
+?path: /films/.+ 
+?path: /video/.+ 
+?path: /about/numbers/.+
+
+body: //div[has-class("col8")]
+title: $body/h1
+subtitle: $body/p[has-class("fsBig")]
+@background_to_image: //div[has-class("image")]
+
+@remove: //ul[has-class("metaList")]
+@remove: //div[has-class("flowplayerInsideShare")]
+@remove: //div[has-class("fsBig news")]
+
+
+
+#### articles ####
+?exists: //article
+
+body: //article
+title: //h1
+subtitle: //p[has-class("fsHeader")]
+description: //meta[@property="og:description"]/@content
+
+<figure>: //p[has-class("fsHeader")]/next-sibling::div[has-class("cont")]
+<figcaption>: //figure//p[has-class("cFadeDark")]
+@background_to_image: //figure//div[has-class("image")]
+
+@if( //figure//div[has-class("player")] ) {
+  @prepend_to($body): //figure//video
+  @background_to_image: //figure//div[has-class("player")]
+}
+
+cover: //figure[has-class("cont")]
+
+$single_photo: //div[has-class("single__entry__photo")]
+@prepend_to($single_photo//p[has-class("info subscript")]): $single_photo//img
+<figcaption>: $single_photo//p[has-class("info subscript")]/span[has-class("copyright")]
+<figure>: $single_photo//p[has-class("info subscript")]
+
+
+@map( //div[has-class("cont")][./span[has-class("subscript")]] ) {
+  $elem: $@
+  @prepend_to($elem): $elem/prev-sibling::div/img[has-class("displayBlock")]
+  $figure: $@/..
+  <figcaption>: $figure/span[has-class("subscript")]
+  <figure>: $figure
+}
+
+$caption: //div[has-class("photoGalleryText")]//div[has-class("col7")]
+
+<figure>: //div[has-class("photoGalleryPhoto")]//div[has-class("image")]
+@background_to_image: //div[has-class("imageBig")]
+
+@map( //figure[has-class("image")] ) {
+  $img: $@ 
+  <cite>: $img/p
+  
+  @if($img/cite) {
+    @wrap(<figcaption>): $@
+  }
+  
+  @if_not($img/cite) {
+    @append(<figcaption>): $img
+  }
+  
+  $caption: (//div[has-class("photoGalleryText")]//div[has-class("col7")]/p)[1]
+  @append_to($img/figcaption): $caption
+}
+
+@background_to_image: //div[has-class("image")]
+<figure>: //div[has-class("cont")][./div[has-class("longreadMedia")]]
+<figcaption>: //p[has-class("subscript")]
+
+<figcaption>: //span[has-class("subscript")][@data-type="alt"]
+<cite>: //figcaption[has-class("subscript")][@data-type="alt"]/next-sibling::span[has-class("subscript")][@data-type="copyright"]
+
+@map( //figcaption[has-class("subscript")][@data-type="alt"] ) {
+  $figcaption: $@ 
+  @append_to($figcaption): $figcaption/next-sibling::cite[has-class("subscript")][@data-type="copyright"]
+}
+
+<div>: //p[.//img][.//span[has-class("subscript")]]
+@set_attr(class, "inserted-image-wrapper"): $@
+<figure>: //div[has-class("inserted-image-wrapper")][.//img]
+<figcaption>: //figure//span[has-class("subscript")]
+@before_el(./..): //figcaption/img
+
+
+@if( //article/text() ) {
+  <slideshow>: //article/next-sibling::div[has-class("photoGallery")]
+  @append_to($body): $@
+}
+
+@if_not( //article/text() ) {
+  @append_to($body): //article/next-sibling::div[has-class("photoGallery")]
+  @remove: $@//p[has-class("h1")]
+}
+
+
+#### video ####
+$video_player: $body//iframe[contains(@src, "/player")]
+
+@map( $video_player ) {
+  @inline: $@
+  $inlined_page: $@
+  @after_el($inlined_page): $inlined_page//video
+  @remove: $inlined_page
+}
+
+
+
+?true
+#### publication date ####
+published_date: //meta[@name="mediator_published_time"]/@content
+
+$info: //h1/next-sibling::p[has-class("fsSmall")]
+@append_to($info/a[has-class("link")]): $info/text()
+@replace("Сегодня", "Today"): $info/a[has-class("link")]
+@replace("Вчера", "Yesterday"): $info/a[has-class("link")]
+@datetime: $info/a[has-class("link")]
+published_date: $@
+
+@replace("Сегодня", "Today"): $body/p[has-class("fsSmall")]/text()
+@replace("Вчера", "Yesterday"): $body/p[has-class("fsSmall")]/text()
+published_date: $body/p[has-class("fsSmall")]/text()
+
+
+
+#### rudimentary ####
+@remove: //p[has-class("fsSmall")]
+@remove: //div[has-class("photoGallery")]//p[has-class("h1")]
+@remove: //div[has-class("blockMoreVert")]
+@remove: $body//p[has-class("blockMoreFirm")]
+
+
+
+#### unsupported content ####
+@unsupported: $body//div[has-class("quiz")]
+@unsupported: $body//form
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+@unsupported: $body//unsupported
+
+
+
+#### fix nested ####
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}

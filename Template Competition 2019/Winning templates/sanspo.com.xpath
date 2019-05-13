@@ -1,0 +1,30 @@
+~version: "2.0"
+
+@before_el(./..): //span[@id="__r_article_img__"]/img
+# @set_attr(href, ./../@href): //a/img
+@set_attr(src, ./../@href): //a/img
+@replace(".html", ".jpg"): //a/img/@src
+@replace("/photos/", "/images/"): //a/img/@src
+@before_el(./..): //a/img
+
+body: //div[has-class("NewsDetail")]
+title: //span[@id="__r_article_title__"]
+
+<figure>: //div[has-class("photo")]
+<figcaption>: //figure//p[has-class("caption")]
+cover: //figure[has-class("photo")]
+
+@replace(\., "/"): //span[@id="__r_publish_date__"]
+@datetime(-2): //span[@id="__r_publish_date__"]
+published_date: $@
+
+<slideshow>: //div[@id="KanrenNewsSection01"]
+@append_to($body): $@
+<figure>: //slideshow//li/img/..
+@after(@alt): //slideshow//figure/img
+@wrap(<figcaption>): $@
+
+<blockquote>: //p/strong[has-class("title01")]/..
+@after(<br>): //blockquote/strong[has-class("title01")]
+
+@unsupported: //div[has-class("movie")]/script[contains(@src, 'player.performgroup.com')]/..

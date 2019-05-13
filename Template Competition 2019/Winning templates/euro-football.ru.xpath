@@ -1,0 +1,264 @@
+~version: "2.1"
+
+
+#### site_name from main page ####
+site_name: "ЕВРО-ФУТБОЛ"
+
+
+#### conditions for target pages  ####
+@if( //div[has-class("video-container")] ) {
+  $live_video: //div[has-class("block__title")]/h1[contains(text(), "рямая трансляция")]
+  @if( $live_video ) {
+    @wrap(<live>): $live_video
+  }
+}
+
+?exists: //article
+!not_exists: //live
+!not_exists: //div[has-class("topic-list")]
+
+
+#### main properties ####
+body: //div[has-class("article__body")]
+body: //div[has-class("topic-text")]
+body: //div[@id="imageContainer"]
+body: //div[has-class("video-container")]
+
+published_date: //div[has-class("article__info")]
+published_date: //li[has-class("topic-info-date")]
+
+description: ($body//p)[1]
+
+#### titles ####
+@if_not( $body ) {
+  title: //title
+}
+
+title:  //h1[has-class("article__title")]
+title:  //h1[has-class("title")]
+title: //div[has-class("block__title")]/h1
+title: //div[has-class("block__title")]
+
+
+#### 123 ####
+@before(<hr>): //div[has-class("match-content-info")]
+@after(<hr>): //div[has-class("match-content-info")]
+<h3>: //div[has-class("match-content-info")]//div[has-class("zagolovok")]
+
+
+#### cover ####
+<figure>: //div[has-class("article__image")]
+@map( //figure[has-class("article__image")][./next-sibling::div[has-class("sourceinfomainnews")]] ) {
+  @append_to($@): $@/next-sibling::div[has-class("sourceinfomainnews")]
+  <cite>: $@
+  @wrap(<figcaption>): $@
+}
+cover: //figure[has-class("article__image")]
+
+
+
+#### gallery ####
+@append_to($body): //div[has-class("article__gallery")]
+$gallery: $@
+<h3>: $gallery//div[has-class("block__title")]
+<slideshow>: $gallery//div[has-class("block__content")]
+<figure>: $gallery//slideshow//li
+<div>: $gallery//slideshow//figure//a
+@wrap(<figcaption>, class, "gallery-link"): $gallery//a[text()="Перейти в галерею"]
+@append_to( $gallery//slideshow ): $gallery//figcaption[has-class("gallery-link")]
+
+@replace("\/thumb\/q\/", "/"): $gallery//slideshow//figure//img/@src
+
+
+
+#### gallery article ####
+@set_attr(src, @data-original): //img[has-class("gallery-thumb")]
+
+@prepend_to( //div[@id="imageContainer"] ): //div[has-class("gallery__description")]
+@append_to( //div[@id="imageContainer"] ): //div[has-class("gallery-source")]
+@prepend("Источник: "): $body//div[has-class("gallery-source")]
+<footer>: $body//div[has-class("gallery-source")]
+
+@if( //div[@id="imageContainer"] ) {
+  description: //div[has-class("gallery__description")]
+  image_url: ($body//img/@src)[1]
+}
+
+
+
+#### author and source ####
+@append_to($body): //div[has-class("source")]/a
+@wrap(<p>, class, "source"): $@
+author: //div[has-class("source")]
+author: //li[has-class("topic-info-author")]/a/text()
+@prepend("Источник: "): $body//p[has-class("source")]
+
+
+
+#### match protocol ####
+@map( //div[has-class("block block__protocol")][.//div[has-class("block block__protocol")]] ) {
+  @after_el($@): $@//div[has-class("block block__protocol")]
+}
+
+<table>: //div[has-class("block block__protocol")]
+
+@map( //table[has-class("block block__protocol")] ) {
+  $protocol: $@
+  <caption>: $protocol//div[has-class("block__title")]
+  <pic>: $protocol//img
+  <old_table>: $protocol//table
+  <old_tbody>: $protocol//tbody
+  <old_tr>: $protocol//tr
+  @after_el(./..): $protocol//div[has-class("block__content")]/*
+  @remove: $protocol//div[has-class("block__content")]
+
+  <thead>: $protocol//div[has-class("protocol__header")]
+  @append_to( $protocol//thead[has-class("protocol__header")] ): $protocol//thead[has-class("protocol__header")]//td
+  @prepend(<td>, class, "empty"): $protocol//thead[has-class("protocol__header")]
+  @remove: $protocol//tr[has-class("protocol__header")]//old_table
+  <th>: $protocol//thead[has-class("protocol__header")]//td
+  @wrap_inner(<b>): $protocol//thead[has-class("protocol__header")]//th[has-class("protocol-header__goals")]
+
+  <tbody>: $protocol//div[has-class("protocol__team")]
+  @append_to( $protocol//tbody[has-class("protocol__team")] ): $protocol//tbody[has-class("protocol__team")]//old_tr
+  @remove: $protocol//tbody[has-class("protocol__team")]//old_table
+  <tr>: $protocol//tbody[has-class("protocol__team")]//old_tr
+  @set_attr(colspan, "2"): $protocol//tbody[has-class("protocol__team")]//td[has-class("protocol-team__goals-team1")]
+  @set_attr(colspan, "2"): $protocol//tbody[has-class("protocol__team")]//td[has-class("protocol-team__goals-team2")]
+  @prepend(<td>, class, "empty"): $protocol//tbody[has-class("protocol__team")]//tr
+  @set_attr(align, "center"): $protocol//tbody[has-class("protocol__team")]//td
+
+  <tr>: $protocol//div[has-class("protocol__staff")]
+  <td>: $protocol//tr[has-class("protocol__staff")]//div[has-class("protocol-staff__logo")]
+  @set_attr(colspan, "1"): $@
+  <td>: $protocol//tr[has-class("protocol__staff")]//div[has-class("protocol-staff__container")]
+  @set_attr(colspan, "5"): $@
+
+  <tr>: $protocol//div[has-class("protocol__place")]
+  @wrap_inner(<td>): $@
+  @set_attr(colspan, "5"): $@
+  @wrap(<td>, class, "calendar"): $protocol//tr[has-class("protocol__place")]//i[has-class("fa-calendar-times-o")]
+  @prepend_to( $protocol//tr[has-class("protocol__place")] ): $protocol//tr[has-class("protocol__place")]//td[has-class("calendar")]
+}
+
+@append("📅"): //i[has-class("fa-calendar-times-o")]
+<span>: //i[has-class("fa-calendar-times-o")]
+
+
+@append(@title): //span[has-class("ef-icon")]
+@wrap(<span>, class, "icon-title"): $@
+
+@append(<span>, class, "table-icon"): //span[has-class("ef-icon-goal")]
+@append("⚽"): //span[has-class("ef-icon-goal")]/span[has-class("table-icon")]
+
+@append(<pic>, src, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAANCAYAAAB7AEQGAAAAFklEQVR42mP8f4zhPwMBwDiqaMgqAgAcJSQCa3uhGgAAAABJRU5ErkJggg==", class, "table-icon"): //span[has-class("ef-icon-yellow-card")]
+
+@append(<pic>, src, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAANCAYAAAB7AEQGAAAAFklEQVR42mP8f4zhPwMBwDiqaMgqAgAcJSQCa3uhGgAAAABJRU5ErkJggg==", class, "table-icon"): //span[has-class("ef-icon-yellow2-card")]
+@append(" "): //span[has-class("ef-icon-yellow2-card")]
+@append(<pic>, src, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAANCAYAAAB7AEQGAAAAFklEQVR42mN8b2j4n4EAYBxVNGQVAQAumh4enHrhCAAAAABJRU5ErkJggg==", class, "table-icon"): //span[has-class("ef-icon-yellow2-card")]
+
+@append(<pic>, src, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAANCAYAAAB7AEQGAAAAFklEQVR42mN8b2j4n4EAYBxVNGQVAQAumh4enHrhCAAAAABJRU5ErkJggg==", class, "table-icon"): //span[has-class("ef-icon-red-card")]
+
+@append(<pic>, src, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAAgklEQVQokWP8z/CfgVzARLZOmmnuP92i03+6hY1kzf2nW2IYGBguMjAw7Ow/3cJFtGaoxoVQOQcGBoatuAxA0YymEQZwGgBXhEMjXgMY/zP8J6QRGRxgYGDwLDSt+YFscz8RGmEu8INxWKC0OgMDgwARmv8VmtY8QHE2uWAQJk9iAACDzys2bVQz6QAAAABJRU5ErkJggg==", class, "table-icon"): //span[has-class("ef-icon-arrow-up")]
+
+@append(<pic>, src, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAAiUlEQVQokWP8z/CfgVzARLbOAdXMwsDAwPBg6rT7DAwMCkSo/8fAwOCrkJ21DdnmuURadouBgeEUjMPEwMDAoJCd1cLAwFBPQOMNBgYGe4XsrDcomqEGNOExAKbxFbIgSoDhMACrRgzNWAzAqZGBgYGB4T8OeH/qVL/7U6eK4JL/z/CfgXEEJk8AuJA+aO2zA4MAAAAASUVORK5CYII=", class, "table-icon"): //span[has-class("ef-icon-arrow-down")]
+
+
+@remove: //span[has-class("ef-icon")][.//*[has-class("table-icon")]]//span[has-class("icon-title")]
+
+
+
+#### fix text formatting ####
+@after(<br>): //blockquote//p
+
+<pic>: //img[@height < 100 or @width < 100]
+
+@replace("\u000D", " "): $body//text() #newline
+@replace("\u00a0", " "): $body//text() #nbsp
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@remove: //div/next-sibling::br
+<br>: //div[not(normalize-space(text()))][not(descendant::*)][not(@id) and not(@class)]
+
+<break>: $body//br[./next-sibling::br]
+<div>: $body//p[./break]
+<p>: $body//break
+
+
+
+
+@replace("http://", "mailto:"): //a[contains(@href, "@gmail.com")]
+@replace("https://", "mailto:"): //a[contains(@href, "@gmail.com")]
+
+<pic>: //table[has-class("table-turnir")]//img
+
+
+#### vk post ####
+$vkposts: $body//div[starts-with(@id, "vk_post")]
+@map($vkposts){
+  $post: $@
+  @set_attr("ord", "cur")
+
+  $script: //script[contains(text(), //div[@ord="cur"]/@id)]
+  @replace("\\s*\\n\\s*", "")
+  @replace("^.+\\(\\\"vk_post_-?\\d+_\\d+\\\",\\s*(-?\\d+),\\s*(\\d+),\\s*'(\\w+)'\\).+$", "https://vk.com/widget_post.php?owner_id=$1&post_id=$2&hash=$3")
+  @set_attr("src", $script/text()): $post
+  <iframe>
+}
+
+
+
+
+#### set high-res and href for images  ####
+@set_attr(src, @data-src): //img[@data-src]
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+## href for .gif images
+@wrap(<figure>): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@after(<a>, href, @href, class, "gif-link"): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@wrap(<figcaption>): $@
+@append(@href): //a[has-class("gif-link")]
+
+
+
+#### related article ####
+<related>: //related
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+
+
+
+#### rudimentary content ####
+@remove: $body//a[@href="https://www.euro-football.ru/article/29/1004118645_evro-futbolru_obyyavlyaet_nabor_redaktorov_novostnoy_lentyi"]/prev-sibling::img[@src="https://www.euro-football.ru/old/i.png"]
+@remove: $body//a[@href="https://www.euro-football.ru/article/29/1004118645_evro-futbolru_obyyavlyaet_nabor_redaktorov_novostnoy_lentyi"]
+@remove: $body//table[.//div[has-class("source")]]
+@remove: //img[@src="https://static.euro-football.ru/images/gallery/"]
+
+
+
+#### fix nested ####
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+#### unsupported content ####
+@unsupported: $body//div[has-class("block-content-translation")]
+@wrap(<unsupported>): $body//script[contains(@src, "static.liveresult.ru/js/txt_widget")]
+@unsupported: //a[has-class("gie-single")][contains(@href, "gettyimages")]
+
+@unsupported: $body//div[has-class("quiz")]
+@unsupported: $body//form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]

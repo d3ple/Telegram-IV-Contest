@@ -1,0 +1,131 @@
+~version: "2.1"
+
+?path: /.+
+
+#### main ####
+site_name: "국제신문"
+body: //div[@id="news_textArea"]
+title:  //div[has-class("news_title")]/h1
+author: //li[has-class("f_news_repoter")]/a
+
+@replace(\w*@.*, ""): //li[has-class("f_news_repoter")]
+author: //li[has-class("f_news_repoter")]
+
+@combine(<br>): //div[has-class("news_title")]/h2/next-sibling::h2
+subtitle: //div[has-class("news_title")]/h2
+
+
+
+#### fix text formatting ####
+<pic>: //img[@height < 50 or @width < 50]
+
+@replace("\u00a0", " "): $body//text()
+@wrap(<p>): $body/text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+
+<div>: //table[.//table]
+
+<h2>: //p[starts-with(normalize-space(text()), "■")]
+@replace("■", ""): $@
+
+<h2>: //p[starts-with(normalize-space(text()), "●")]
+@replace("●", ""): $@
+
+
+#### published ####
+@match(20.+): //span[has-class("f_news_date")]
+@datetime: //span[has-class("f_news_date")]
+published_date: $@
+
+
+
+#### images ####
+<figure>: //table[.//img[@id="newsimg"]]
+<figure>: //table[.//td[@align="right"]]
+<figcaption>: //figure//td[has-class("imgcaption")]
+
+@replace((photo\b.\d{4}\b.\d{4}\b.)(\d), "$1L$2"): //img/@src
+@replace((photo\b.\d{4}\b.\d{4}\b.)(S), "$1L"): //img/@src
+
+<figure>: //div[has-class("body_photoTable1")]
+<figcaption>: $@//div[has-class("imgcaption")]
+
+
+#### set high-res and href for images  ####
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+
+
+
+
+
+#### related article ####
+<related>: //div[@id="news_relGisa"]
+<h2>: //related//p[has-class("relGisa_title")]
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+
+
+
+#### rudimentary content ####
+@replace("▶", ""): $body//text()
+@remove: //related//ul[has-class("relGisa_title2")]
+@remove: //a[@href="https://www.facebook.com/Busannews/"]
+@remove: //a[@href="https://www.instagram.com/daily_kookje/"]
+
+
+
+#### gallery article ####
+body: //div[@id="container"]
+title: //h2
+<figure>: //div[@id="thumbs"]//li
+<figcaption>: //figure//div[has-class("caption")]
+
+@map( //figcaption[has-class("caption")] ) {
+  @append_to($@): $@/div[has-class("download")]
+}
+
+@if( //div[@id="container"] ) {
+  @set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+  
+  image_url: $body//figure//img/@src
+  
+  @prepend(<span>, class, "description"): $body
+  @map( //figcaption ) {
+    @clone: $@
+    @append_to($body/span[has-class("description")]): $@
+    @after("\u00a0"): $@ 
+  }
+  @remove: $body/span[has-class("description")]//div[has-class("download")]
+  description: $body/span[has-class("description")]
+  @remove: $body/span[has-class("description")]
+}
+
+
+
+#### fix nested ####
+true:
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+#### unsupported content ####
+@unsupported: //form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]

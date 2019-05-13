@@ -1,0 +1,25 @@
+~version: "2.0"
+
+@before_el(./..): //a/img
+<div>: //p/video/..
+<div>: //p/iframe/..
+
+body: //article
+title: $body/h1
+published_date: //div[has-class("article-meta")]/text()[1]
+author: //div[has-class("article-writer-name")]/h3
+site_name: "VLADTV"
+cover: //div[@id="image-main"]/img
+
+@set_attr(src, @data-src): //img
+
+@remove: //div[has-class("article-writer")]
+@remove: //div[has-class("article-social-media")]
+
+<figure>: //div[has-class("gallery-slide-image")]
+<figcaption>: $@/a/p
+
+<slideshow>: //div[@id="area-gallery"]
+@prepend_to($body):  //slideshow//figure/img[@data-video]/..
+<iframe>: //img[@data-video]
+@set_attr(src, @data-video): $@

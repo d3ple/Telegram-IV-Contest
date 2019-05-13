@@ -1,0 +1,141 @@
+~version: "2.1"
+
+
+#### main ####
+?exists: //body[has-class("page-node")]
+?exists: //section[@id="comment"]
+!not_exists: //ul[has-class("tabs primary")][./li[has-class("active")]]
+
+body: //div[has-class("node-content")]
+title: //h1[has-class("node-title")]
+author: //span[has-class("node-author")]/span[has-class("username")]
+
+@replace("à", ","): //time[has-class("node-time")]/text()
+@replace("/", "-"): //time[has-class("node-time")]/text()
+@datetime: //time[has-class("node-time")]/text()
+published_date: $@
+
+image_url: //meta[@property="og:image"]/@content
+image_url: //meta[@property="twitter:image"]/@content
+image_url: ($body//img/@src)[1]
+
+
+
+#### fix text formatting ####
+<pic>: //img[@heigth < 50 or @width < 50]
+
+@replace("\u00a0", " "): $body//text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+
+
+#### get image high resolution ####
+@set_attr(src, @data-jslghtbx): //img[@data-jslghtbx][not(@data-jslghtbx="")]
+
+$highres_caption: //a[text()="Cliquer pour agrandir"]
+@map( $highres_caption ) {
+  $cur_caption: $@
+  @set_attr(src, $cur_caption/@href):  $cur_caption/../../img
+  @remove: $cur_caption
+}
+
+
+#### set href for images  ####
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+
+#### related ####
+<related>: //div[has-class("field-name-field-pour-aller-plus-loin")]
+<h4>: //related/div[has-class("field-label")]
+
+
+#### reference and anchor ####
+<reference>: //a[has-class("footnote")]
+<reference>: //a[has-class("footnote-ref")]
+@set_attr(name, @id): //reference
+@prepend(<anchor>, name, @id): //li[@id]
+
+
+#### rudimentary ####
+@remove: //div[has-class("bannerClub2")]
+
+
+
+#### review result ####
+@append_to($body): //div[@id="section_note"]
+<span>: //div[has-class("test-prix")]//div
+@before(" "): //div[has-class("test-prix")]//a
+
+@wrap(<h3>): //div[has-class("test-note")]
+@prepend("Le résultat: "): //div[has-class("test-note")]
+@before("/ "): //div[has-class("test-note")]//div[has-class("n2")]
+<span>: //div[has-class("test-note")]//div
+
+
+
+#### fieldset ####
+@before(<hr>): //fieldset
+@after(<hr>): //fieldset
+<h2>: //fieldset/legend
+
+
+
+#### ended poll ####
+<table>: //div[has-class("poll")]
+$poll: $@
+
+<td>: $poll/div[has-class("total")]
+@set_attrs(colspan, 2, align, "center"): $@
+@wrap(<tfoot>, class, "total-row"): $poll/td[has-class("total")]
+
+<td>: $poll/div[has-class("text")]
+@wrap(<tr>, class, "item-row"): $@
+<td>: $poll/div[has-class("percent")]
+<td>: $poll/div[has-class("bar")]
+@combine(<br>): //td[has-class("bar")]/next-sibling::td[has-class("percent")]
+
+@map( $poll/tr[has-class("item-row")] ) {
+  $item_row: $@
+  @append_to($item_row): $item_row/next-sibling::td[has-class("bar")]
+}
+
+## graphic poll bar
+<pic>: //div[has-class("foreground")]
+$poll_bar: $@
+@replace("%", ""): $poll_bar/@style
+@style_to_attrs(width, width): $poll_bar
+@set_attrs(src, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk6Nj0HwAEBQI7OYJWaQAAAABJRU5ErkJggg==", height, "14"): $poll_bar
+@remove: $poll_bar[@width="0"]
+
+
+
+#### unsupported ####
+@unsupported: //form[@id="poll-view-voting"]
+@unsupported: //blockquote[has-class("reddit-card")]
+@unsupported: //figure[./div[@id='embed-player']]
+@unsupported: //form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+
+
+
+#### fix nested ####
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}

@@ -1,0 +1,104 @@
+~version: "2.1"
+
+$hindi_ver: //div[has-class("parent-logo")]//img[contains(@src, "hindilogo")]
+@if( $hindi_ver ) {
+  site_name: "द सिटिज़न"
+}
+site_name: "The Citizen"
+
+?exists: //div[has-class("citizen")]
+
+#### main ####
+body: //div[has-class("col-sm-8 col-xs-12")]
+title:  //div[has-class("citizen")]/p
+subtitle: //p[has-class("paragraph")]
+
+author: //div[has-class("date")]//a[contains(@href, "contributer/detail")]
+
+@replace(\|, ""): //div[has-class("date")]/p/text()
+@datetime: //div[has-class("date")]/p/text()
+published_date: $@
+
+
+
+#### cover ####
+<figure>: //div[has-class("row1")][./div[has-class("fill")]]
+@background_to_image: $@/div[has-class("fill")]
+@inline: //figure[has-class("row1")]/comment()
+cover: //figure[has-class("row1")]
+
+<figure>: //div[has-class("row")][./div[has-class("fill")]]
+@background_to_image: $@/div[has-class("fill")]
+@inline: //figure[has-class("row")]/comment()
+cover: //figure[has-class("row")]
+
+@background_to_image: //div[has-class("fill")]
+cover: $@
+
+
+
+#### fix text formatting ####
+@replace("\u000D", " "): $body//text()
+@replace("\u00a0", " "): $body//text()
+@wrap(<paragraph>): $body//text()[./next-sibling::br[./next-sibling::br] and ./prev-sibling::br[./prev-sibling::br]]
+<div>: //p[.//paragraph]
+<p>: //paragraph
+
+<pic>: //img[@height < 50 or @width < 50]
+# @wrap(<p>): $body/text()
+# <br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+
+
+
+
+
+
+
+
+#### set high-res and href for images  ####
+gigigigigf
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+
+
+#### related article ####
+<related>: //div[has-class("profile")][./div[has-class("profile_2_2")]]
+<h2>: //p[has-class("story")]
+@prepend_to(//related): $@
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+
+
+
+#### rudimentary content ####
+@remove: //hr[has-class("right")]
+
+
+
+#### fix nested ####
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+#### unsupported content ####
+@unsupported: //form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]

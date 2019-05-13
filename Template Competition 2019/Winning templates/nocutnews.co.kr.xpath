@@ -1,0 +1,150 @@
+~version: "2.1"
+
+
+?exists: //span[@id="lblDateLine"]
+?exists: //div[has-class("big_slide")]
+?exists: //li[has-class("email")]
+
+
+#### main ####
+site_name: "노컷뉴스"
+body: //div[has-class("content")]
+title:  //div[has-class("h_info")]//h2
+author: //span[@id="lblByline"]
+
+subtitle: //div[@itemprop="articleBody"]/prev-sibling::h3
+subtitle: //p[has-class("f_byline")]/prev-sibling::h3
+
+published_date: //meta[@name="article:published_time"]/@content
+@datetime: //span[@id="lblDateLine"]
+published_date: $@
+
+@append_to($body): //li[has-class("email")]/a[@id="hlByline2"]
+$email_wrap: $@
+@after(@title): $email_wrap
+@wrap(<a>, class, "email"): $@
+@set_attr(href, $email_wrap/@title): //a[has-class("email")]
+@remove: $email_wrap
+@replace(.+, "mailto:$0"): //a[has-class("email")]/@href
+
+
+
+
+#### images ####
+<figure>: //div[has-class("viewpic")]
+<figcaption>: $@/span
+
+
+
+#### gallery article ####
+title: //p[has-class("root_title")]/strong
+
+@match(Data.photo.slide\s=\s(.+);, 1): //script[contains(text(), "Data.photo.slide")]
+@json_to_xml: $@/text()
+$gallery: $@
+$gallery_photo: $gallery/item
+@set_attr(src, ./text()): $gallery_photo//url
+<img>: $gallery_photo//url
+
+@html_to_dom: $gallery_photo//caption
+<figcaption>: $@
+
+<figure>: $gallery_photo
+
+@prepend_to($body): $gallery
+<div>: $@
+@set_attr(class, "gallery-with-caption"): $@
+
+@remove: //div[has-class("top_info")]
+@remove: //div[has-class("small_slide")]
+
+
+
+#### single image article ####
+title: //div[has-class("reporter_info")]/h2
+author: //li[has-class("email")]/span
+published_date: //meta[@name="article:published_time"]/@content
+
+
+
+#### description and preview for gallery aticle
+@prepend(<p>, class, "desc"): $body
+@if( //div[has-class("gallery-with-caption")] ) {
+  @clone: //div[has-class("gallery-with-caption")]//figcaption
+  @append_to(//p[has-class("desc")]): $@
+  @after(<br>): //p[has-class("desc")]/figcaption
+  description: //p[has-class("desc")]
+  @remove: //p[has-class("desc")]
+  image_url: //div[has-class("gallery-with-caption")]//figure//img/@src
+}
+
+
+
+#### rudimentary content ####
+@remove: //div[./iframe[contains(@src, "adstream") and not(./next-sibling::*) and not(./prev-sibling::*)]]
+@remove: //iframe[contains(@src, "innorame.com")]
+@remove: //div[has-class("con_section")]
+@remove: //a[./img[contains(@src, "nocutnews.co.kr/nocut/v3/img/ban_newsstand.gif")]]
+@remove: //div[has-class("con_section2")]
+@remove: //div[@id="divTimeNews"]
+@remove: //div[@id="divRecommend"]
+@remove: //iframe[@id="ifrPhotoViewer"]
+@remove: //div[has-class("hotclick")]
+@remove: //div[@id="divPhotoView"]
+@remove: //ul[has-class("view_tab")]
+@remove: //div[@id="divRelatedNewsBox"]
+
+
+
+
+#### fix text formatting ####
+<pic>: //img[@height < 50 or @width < 50]
+@replace("\u000D", " "): $body//text()
+@replace("\u00a0", " "): $body//text()
+# @wrap(<p>): $body/text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+@wrap(<p>): $body//text()[./next-sibling::br[./next-sibling::br] and ./prev-sibling::br[./prev-sibling::br]]
+
+<span>: //div[@itemprop="articleBody"]/prev-sibling::h3/p
+
+
+#### set high-res and href for images  ####
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+
+
+#### related article ####
+<related>: //div[has-class("hotbox")]
+<h2>: //related//a[@id="hlHotissue"]
+@append_to($body): //related
+@combine(<br>): //related/next-sibling::related
+@before(<br>): //related//strong[text()="관련기사 보기"]
+
+
+#### fix nested ####
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+#### unsupported content ####
+@unsupported: //form
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]

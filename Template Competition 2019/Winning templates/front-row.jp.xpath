@@ -1,0 +1,287 @@
+~version: "2.1"
+
+
+#### site_name from main page ####
+site_name: "FRONTROW"
+
+
+#### conditions for target pages  ####
+?exists: //div[has-class("article")]
+?exists: //div[has-class("album")][.//div[has-class("album-images")]]
+
+
+#### main properties ####
+body: //div[has-class("article")]
+title:  //h1[has-class("content-title")]/a
+description: //meta[@property="og:description"]/@content
+
+@datetime(0, "en-US", "yyy-MM-dd"): //div[has-class("content-pubdate")]/a/text()
+published_date: $@
+
+<p>: //div[has-class("content-summary")]
+subtitle: $@
+
+
+
+#### fix text formatting ####
+@after(<br>): //blockquote//p
+<pic>: //img[@height < 100 or @width < 100]
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@replace("\u000D", " "): $body//text() #newline
+@replace("\u00a0", " "): $body//text() #nbsp
+<br>: $body/p[text()="　"][not(descendant::*)]
+
+
+
+
+#### set high-res and href for images  ####
+@set_attr(src, @data-lazy-loaded): //img[@data-lazy-loaded]
+@set_attr(src, @data-src-lazy): //img[@data-src-lazy]
+
+@set_attr(href, ".//ancestor::a/@href"): //a[not(contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg"))]//img
+@set_attr(src, ".//ancestor::a/@href"): //a[contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".gif") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpg") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".png") or contains(translate(@href, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), ".jpeg")]//img
+
+## href for .gif images
+@wrap(<figure>): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@after(<a>, href, @href, class, "gif-link"): //img[contains(translate(@src, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '.gif')][@href]
+@wrap(<figcaption>): $@
+@append(@href): //a[has-class("gif-link")]
+
+
+
+#### cover ####
+@if( //div[has-class("content-cover")]//div[has-class("image-bg-blur")]//div[has-class("content-cover-via")] ) {
+  <figure>: //div[has-class("image-bg-blur")]
+  <figcaption>: //figure//div[has-class("content-cover-via")]
+  @wrap_inner(<cite>): $@
+  cover: //figure[has-class("image-bg-blur")]
+  @remove: //div[has-class("article-cover")]
+}
+
+@if_not( //div[has-class("content-cover")]//div[has-class("image-bg-blur")]//div[has-class("content-cover-via")] ) {
+  @if( //div[has-class("article-cover")][@data-via-text] ) {
+    <figure>: //div[has-class("article-cover")]
+    @append(@data-via-text): //figure[has-class("article-cover")]
+    @wrap(<cite>): $@
+    @wrap(<figcaption>): $@
+    cover: //figure[has-class("article-cover")]
+  }
+  
+  @if_not( //div[has-class("article-cover")][@data-via-text] ) {
+    <figure>: //div[has-class("image-bg-blur")]
+    <figcaption>: //figure//div[has-class("content-cover-via")]
+    @wrap_inner(<cite>): $@
+    cover: //figure[has-class("image-bg-blur")]
+    @remove: //div[has-class("article-cover")]
+  }
+}
+
+
+
+##### caption ####
+@wrap(<figure>, class, "inc-figure"): //img[has-class("inc-img")]
+<figcaption>: //p[has-class("inc-figcaption")]
+
+@map( //figure[has-class("inc-figure")][.//img][./next-sibling::figcaption] ) {
+  $cur_img: $@
+  @append_to($cur_img): $cur_img/next-sibling::figcaption
+}
+
+
+
+#### related article ####
+@map( //div[has-class("cite-box thumb-full")] ) {
+  <table>: $@
+  $related_block: $@
+  @append(<tr>, class, "1row"): $related_block
+  @append(<tr>, class, "2row"): $related_block
+  @append(<tr>, class, "3row"): $related_block
+  
+  @append_to($related_block/tr[has-class("1row")]): $related_block//a
+  @wrap(<td>, rowspan, "3"): $@
+  
+  @append_to($related_block/tr[has-class("1row")]): $related_block//div[has-class("description")]//h4
+  @wrap(<td>): $@
+  <b>: $@/h4
+  @wrap(<a>, href, $related_block//a/@href): $@
+  
+  @append_to($related_block/tr[has-class("2row")]): $related_block//div[has-class("description")]//p
+  @wrap(<td>): $@
+  
+  @append_to($related_block/tr[has-class("3row")]): $related_block//div[has-class("description")]//cite
+  @wrap(<td>, align, "right", valign, "bottom"): $@
+  @wrap_inner(<sub>): $@
+  
+}
+
+<pic>: $body//table//img
+@set_attrs(width, "", height, ""): $@
+
+
+
+
+#### rudimentary content ####
+@set_attrs(width, "", height, ""): $body//iframe
+@remove: //a[has-class("album-link-thumb ellipsis")]
+@remove: $body//script
+@remove: $body//noscript
+
+
+
+#### hrbr ####
+@after(<hr>, class, "box"): //div[has-class("raw-html")][./div[contains(@style, "border")]]
+@before(<hr>, class, "box"): //div[has-class("raw-html")][./div[contains(@style, "border")]]
+
+@wrap(<aside>): //div[has-class("raw-html")][./a/div[contains(@style, "border")]]
+
+@wrap_inner(<u>): //p[has-class("box")]//span[has-class("font-color-ulcyan")]
+<table>: //p[has-class("box")]
+@wrap_inner(<th>, align, "left"): $@
+
+@before(<hr>): $body//div[has-class("block-lbox")][./div[has-class("box-border-solid") or contains(@class, "box-color-bg")]]
+@after(<hr>): $body//div[has-class("block-lbox")][./div[has-class("box-border-solid") or contains(@class, "box-color-bg")]]
+
+
+
+#### text decor ###
+<b>: //table//span[has-class("font-big")]
+
+@before_el(./..): //p/span[has-class("font-big")]
+@wrap(<h2>, class, "font-big-wrap"): $@
+
+@before_el(./..): //p/node()[.//span[has-class("font-big")]]
+@wrap(<h2>, class, "font-big-wrap"): $@
+@wrap(<b>): //h2[has-class("font-big-wrap")][.//strong]//text()
+
+<mark>: //span[contains(@class, "font-color-bg")]
+@wrap_inner(<b>): //span[contains(@class, "font-color-")]
+<u>: //span[contains(@class, "font-color-ul")]
+
+<sub>: //*[has-class("font-small")]
+<cite>: //blockquote//sub[has-class("font-small")][starts-with(text(), "ー") or starts-with(text(), "―")][not(./next-sibling::*)]
+@combine(<br>): //blockquote/cite/next-sibling::cite
+<cite>: //blockquote//footer
+
+@before(<hr>): //div[has-class("raw-html")][./fieldset][./prev-sibling::aside]
+@after(<br>): $body//fieldset//legend
+<aside>: $body//fieldset
+
+<sub>: $body//font[@size="1"]
+<sub>: $body//span[@style="font-size: xx-small;"]
+
+
+
+#### slideshow ####
+<slideshow>: //div[@id="testtesttest"]
+
+<slideshow>: //div[has-class("flex-banner")]
+<slideshow>: //div[has-class("block-carousel")]
+
+<slideshow>: //div[has-class("block-album-link")]
+@wrap(<figcaption>): //slideshow//a[has-class("album-permalink")]
+@prepend(<pic>, class, "icon64", src, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAABPElEQVQ4jc3UsUpcQRjF8Z9yKxEfQCxkSxGJIEuECJIHEFGwkxQW2voAMvMVsbewSCUiFikiNr5BIBaCrYhIKiuLEKyvKbwX1suFZXWLfDDNmeE/53DgG3n2bJgzOlQaishRoIvOGxkl7nCVcioLfMIh/r7D2Bi2cVlUzp5STotvIUWOUVxjugbWtkWOHezhAZspp5t+wJRTGTmo+iga97uYrM4a9htu5jCOy5RT2fZBs+XaUYnbBmwaJ/iOz1XUvsAvWMcSzntgXVxgDlP4gdU26Csh5fQn5XSGRy+xRY6P+IaZnqcTOMBGP4ciRwenOI4cKzjGh5Z0U/jaFF+VEjkWcITZSlpuAfXOWD+HzWgDTxPYadEGmjpyDZkfEFj2NF3WwHtMRI5f73GG3zXwJ7YMYdvAyH+/YIcO/AeZzVKYRPlHPgAAAABJRU5ErkJggg=="): //slideshow//span[has-class("album-link-title")]
+
+@prepend(" ("): //span[has-class("album-images-count")]
+@append(")"): //span[has-class("album-images-count")]
+
+@replace("_normal", "_xlarge"): //slideshow[has-class("block-album-link")]//img/@src
+
+
+
+
+### album page ###
+body: //div[has-class("main-contents")]
+title: //h1[has-class("album-title")]/a
+
+@prepend(<pic>, class, "icon64", src, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAABf0lEQVQ4jY3SMWhUQRSF4W+XYBFkkSAiYpEqLAgWqSwsrCwsFVEIWFhYGSWICorcmSJYiJWFIphGCIogNvYiqTSFVUpJETSKhCUECRYbizcLz3V132kG7sz8nHPvbe3ZU1dOeQKT2IkUfQ3UHgLM4DFe4VZOeV8TSGvgJKc8Wz53sI4uXuNGpPgx1klOeRoPCuA2LuAFLuLuOEcT5ZzFCSxEiqUCvo5dXMJHLI+D/MQvHMsp7y/1q/iKPg43cbKCJVwrkR7hPI5jAys55U553xueWhsixQ4W8UbVh4c4VHt3Es9VjT877KRV35Oc8gHcxGlsYRVXcBBfSu0I7uHJwNEfexIpesglyhzell4pkHlsInBqpJO6cspt3MECnpbyfUzjZYGdixRb7ZGEylUfveL2G3Kk2MZnrKkG0Pkrzggt411xcDmnPKXq2Rm8LxH/HacWq4tnmMEn1VKuYi5SNIMU0FHVCnTxAYuRYnNw3whSQJOqUX+PFLv1u8aQ/+k3yLSAjijKw+gAAAAASUVORK5CYII="): //a[has-class("album-content-link")]
+
+@set_attr(optional, true): //pic[has-class("icon64")]
+@after(" "): //pic[has-class("icon64")]
+
+$less_then_30: //div[has-class("album-images")][count(child::a[has-class("album-image-small")]) < 30]
+@if( $less_then_30 ) {
+  @map( //div[has-class("album-images")]/a[has-class("album-image-small")] ) {
+    <iframe>: $@
+    @set_attrs(src, @href): $@
+    @inline: $@
+    $inlined_page: $@
+    @after_el($inlined_page): $inlined_page//div[has-class("album")]//figure[has-class("album-image")]
+    @remove: $inlined_page
+  }
+}
+
+@if_not( $less_then_30 ) {
+  @replace("_normal", "_xlarge"): //img[has-class("album-image-small-img")]/@src
+}
+
+
+ 
+#### video thumb ####
+<iframe>: //div[has-class("embed-box")][@data-embed][not(@data-embed="")]
+@set_attr(src, @data-embed): $@
+
+
+
+#### multipage ####
+@if( //a[has-class("content-paging-link-current")]/span[text()="1"] ) {
+  @while( //a[has-class("content-paging-next-block-button")] ) {
+    $cur: $@
+    <iframe>: $cur
+    @set_attrs(src, @href): $@
+    @inline: $@
+    $inlined_page: $@
+    @after_el($inlined_page): $inlined_page//div[has-class("article")]
+    @remove: $inlined_page
+  }
+  @remove: //div[has-class("content-paging")]
+}
+
+
+
+@remove: //div[has-class("content-paging")]//div[has-class("content-paging-prev")]
+@remove: //div[has-class("content-paging")]//div[has-class("content-paging-next")]
+<table>: //div[has-class("content-paging")]
+<tr>: //table//div[has-class("content-paging-links")]
+@wrap(<td>): //table//a[has-class("content-paging-link")]
+<th>: //td[./a[has-class("content-paging-link-current")]]
+
+
+
+##### antidiffer ####
+@append("\u00a0"): $body/p[contains(text(), "セ")]
+@append("\u00a0"): $body/p[contains(text(), "ん")]
+@append("\u00a0"): $body/p[contains(text(), "ど")]
+@append("\u200B"): $body/p[contains(text(), "か")]
+@append("\u200B"): $body/p[contains(text(), "ロ")]
+@append("\u200C"): $body/p[contains(text(), "の")]
+
+
+#### fix nested ####
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+
+#### unsupported content ####
+@unsupported: $body//div[has-class("quiz")]
+@unsupported: $body//form
+
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
+@unsupported: $body//div[has-class("woobox-offer")]
+@unsupported: $body//div[@id="woobox-root"]
+
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+<unsupported>: $body//script[contains(@src, "thinglink")]
+@wrap(<unsupported>): $body//script[contains(@src, "chartbeat")]
+
+@unsupported: $body//unsupported

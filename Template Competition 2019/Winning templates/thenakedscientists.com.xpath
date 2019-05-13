@@ -1,0 +1,57 @@
+~version: "2.0"
+
+@remove: //meta[@property="article:author"]
+<div>: //p/img/..
+<div>: //p/table/..
+<div>: //p/video/..
+<div>: //p/audio/..
+<div>: //p/source/..
+<pic>: //table//img
+<div>: //td/video/..
+@before_el(./..): //h4/img
+
+
+body: //div[has-class("node-body")]
+title: //h1[has-class("page-header")]
+published_date: //div[has-class("pane-node-created")]/div[has-class("pane-content")]
+site_name: "The Naked Scientists"
+
+@replace("Presented by", ""): //div[has-class("node-info")]//a[starts-with(@href, "/users/")]/../text()
+@replace("By", ""): //div[has-class("node-info")]//a[starts-with(@href, "/users/")]/../text()
+author: //div[has-class("node-info")]//a[starts-with(@href, "/users/")]/..
+subtitle: //div[has-class("pane-node-field-interviewee")]
+<span>: //div[has-class("pane-node-field-interviewee")]//div
+
+<figure>: //div[has-class("media-element-container")]
+
+<figure>: //div[has-class("media-wrapper")]
+<figcaption>: //div[has-class("field-name-field-credit")]
+<span>: //figcaption//div
+cover: //figure[has-class("media-wrapper")]
+
+<ul>: //div[has-class("field-name-field-references")]/div[has-class("field-items")]
+<li>: //ul/div[has-class("field-item")]
+
+<related>: //div[has-class("pane-podcasts-panel-pane-3")]
+@remove: //related//div[has-class("views-field-term-node-tid")]
+@append_to($body): //related[has-class("pane-podcasts-panel-pane-3")]
+
+@if( //figure[has-class("media-wrapper")]//a[has-class("track")] ) {
+  @prepend_to($body): //figure[has-class("media-wrapper")]//a[has-class("track")]
+}
+
+@prepend_to($body): //a/h4[starts-with(text(), "Part of the show")]/..
+@wrap(<h5>): $@
+
+<audio>: //a[has-class("track")]
+@set_attr(src, @href): $@
+
+<details>: //div[has-class("transcript-container")]
+@prepend("Full Trancript"): $@
+@wrap(<summary>): $@
+<b>: //a[starts-with(@href, '/articles')]/h3
+@after(<br>): //div[has-class("views-row")]
+@remove: //a[has-class("transcript-link")]
+@remove: //a[@download]
+@remove: //div[has-class("collapse-toggle")]
+<pic>: //details//img

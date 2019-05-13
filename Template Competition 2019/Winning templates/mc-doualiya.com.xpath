@@ -1,0 +1,45 @@
+~version: "2.0"
+
+
+<div>: //p/img/..
+<div>: //p/audio/..
+<div>: //p/iframe/..
+@before_el(./..): //a/img
+
+?exists: //time[@pubdate="pubdate"]
+
+body: //article
+title: //h1
+published_date: //time[@pubdate="pubdate"]/@datetime
+
+@combine(", "): //span[has-class("m-from-author__name")]/next-sibling::span[has-class("m-from-author__name")]
+author: //span[has-class("m-from-author__name")]/text()
+
+$cover_image: //div[has-class("t-content__main-media")]/figure
+@remove: $cover_image//img[contains(@src, "data:image")]
+<div>: //noscript
+@replace("hermes_infographie_caroussel_home", "home_1024"): $cover_image//img/@src
+cover: $cover_image
+
+<b>: //p[has-class("t-content__chapo")]
+@replace("\u00a0", ""): $body//text()
+
+
+
+$script: //span[has-class("m-feed-sub__audio")]/script
+@json_to_xml: $script/text()
+$audio_src: $@//url/text()
+@prepend(<audio>): //span[has-class("m-feed-sub__audio")]
+@set_attr(src, $audio_src): $@
+@replace("سمعي", ""): $body//text()
+
+
+
+
+@remove: //div[has-class("t-content__dates")]
+@remove: //div[has-class("m-content-authors")]
+@remove: //div[has-class("m-interstitial")]
+@remove: //div[has-class("t-content__tags")]
+@remove: //div[has-class("t-content__shares")]
+
+

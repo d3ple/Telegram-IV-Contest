@@ -1,0 +1,74 @@
+~version: "2.1"
+
+site_name: "DAGOSPIA"
+?exists: //div[has-class("social")]
+
+#### body ####
+body: //article
+title: //meta[@name="twitter:title"]/@content
+published_date: //time[@itemprop="datePublished"]/@content
+
+<figure>: //div[@itemprop="image"]
+cover: //time[@itemprop="datePublished"]/prev-sibling::figure[@itemprop="image"]
+
+
+#### lead text ####
+<b>: //h1[@itemprop="headline"]
+@wrap(<b>): //b[@itemprop="headline"]/next-sibling::p
+@wrap(<span>, class, "text"): $body/text()
+<hr>: //span[has-class("text")][contains(text(), "-")]
+@after(<hr>): //b[@itemprop="headline"]/child::*/..
+
+@if( //b[@itemprop="headline"][not(text())] ) {
+  description: //b[@itemprop="headline"]/next-sibling::b
+}
+description: //b[@itemprop="headline"]
+
+
+#### images ####
+@set_attr(href, ./../@href): //a/img
+@set_attr(src, @data-src): //img
+
+<figure>: //span[has-class("imgDrag")]
+<figcaption>: $@/strong
+
+@before(<hr>): //section[has-class("fotogallery")][.//figure]
+
+@replace("_tn.jpg", ".jpg"): //img/@src
+@replace("_tn.png", ".png"): //img/@src
+
+
+#### rudimentary ####
+@replace("\u00a0", " "): $body//text()
+<br>: //p[not(normalize-space(text()))][not(descendant::*)]
+@after(<br>): //blockquote//p
+
+@remove: //time[@itemprop="datePublished"]
+@remove: //div[has-class("social")]
+@remove: //div[has-class("link")]
+@replace("Condividi questo articolo", ""): $body//text()
+
+
+#### fix nested ####
+<pic>: //table//img
+@set_attrs(width, "", height, ""): $@
+
+$problems: $body
+@while( $problems ) {
+  $test: $body//*[self::blockquote or self::aside or self::figure or (self::img and not(./ancestor::figure)) or (self::video and not(./ancestor::figure)) or self::iframe or self::audio or self::slideshow or self::related or self::footer or self::table[not(ancestor::table) and not(descendant::table)]]
+  $problems: $test/self::*[ancestor::anchor or ancestor::blockquote or ancestor::aside or ancestor::footer or ancestor::strong or ancestor::b or ancestor::em or ancestor::i or ancestor::ins or ancestor::u or ancestor::del or ancestor::s or ancestor::strike or ancestor::code or ancestor::kbd or ancestor::samp or ancestor::tt or ancestor::mark or ancestor::sup or ancestor::pic or ancestor::sub or ancestor::a or ancestor::reference or ancestor::h1 or ancestor::h2 or ancestor::h3 or ancestor::h4 or ancestor::h5 or ancestor::h6 or ancestor::p or ancestor::pre or ancestor::hr or ancestor::img or ancestor::br]
+  @split_parent: $problems
+}
+
+
+#### unsupported content ####
+@wrap(<unsupported>): $body//script[contains(., "playbuzz.") or contains(@src, "playbuzz.")]
+@wrap(<unsupported>): $body//script[contains(., "apester.") or contains(@src, "apester.")]
+@wrap(<unsupported>): $body//script[contains(@id, "infogram_")]
+
+@unsupported: $body//unsupported
+@unsupported: $body//div[has-class("playbuzz")]
+@unsupported: $body//div[has-class("apester-media")]
+@unsupported: $body//div[has-class("issuuembed")]
+@unsupported: $body//div[has-class("scrbbl-embed")]
+@unsupported: $body//div[has-class("piktowrapper-embed")]
